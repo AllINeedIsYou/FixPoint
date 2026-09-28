@@ -12,12 +12,29 @@ class ApplicationCreateShema(BaseModel):
     info: str = Field(max_length=100)
 
 
+# Схема для запчасти(запрос на создание)
+class PartCreateShema(BaseModel):
+    name: str
+    price: float = Field(gt=0)
+    quantity: int = Field(default=1, gt=0)
+
+
+class PartShema(PartCreateShema):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    application_id: int
+
+
 class ApplicationShema(ApplicationCreateShema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     status_info: int
     status: str
+    assignee_id: int | None = None
+    parts: list[PartShema] = []
+    total_cost: float = 0
 
 
 # Схема для запроса на создание кода

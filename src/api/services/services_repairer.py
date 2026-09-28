@@ -2,7 +2,8 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
 
-from src.models import Application
+from src.models import Application, Part
+from src.shemas import PartCreateShema
 
 #функция для работы(status_info)
 def repair_info(application_id:int,db:Session):
@@ -28,3 +29,65 @@ def repair_info(application_id:int,db:Session):
     db.commit()
     db.refresh(repair_id)
     return repair_id
+
+
+#функция добавления запчасти в заявку (стоимость заявки считается суммой запчастей)
+def add_part(application_id: int, part_data: PartCreateShema, db: Session):
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Заявка с id={application_id} не найдена"
+        )
+
+    new_part = Part(
+        application_id=application_id,
+        name=part_data.name,
+        price=part_data.price,
+        quantity=part_data.quantity,
+    )
+
+    db.add(new_part)
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+#функция удаления ошибочно добавленной запчасти
+def delete_part(application_id: int, part_id: int, db: Session):
+    part = (
+        db.query(Part)
+        .filter(Part.id == part_id, Part.application_id == application_id)
+        .first()
+    )
+    if not part:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Запчасть с id={part_id} не найдена у заявки с id={application_id}"
+        )
+
+    application = part.application
+    db.delete(part)
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+#функция назначения мастера на заявку
+def take_application(application_id: int, employee_id: int, db: Session):
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Заявка с id={application_id} не найдена"
+        )
+    if application.assignee_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Заявка с id={application_id} уже назначена другому мастеру"
+        )
+
+    application.assignee_id = employee_id
+    db.commit()
+    db.refresh(application)
+    return application
