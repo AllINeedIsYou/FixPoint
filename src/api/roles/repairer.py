@@ -19,9 +19,9 @@ def get_application_repairer(db: Session = Depends(get_db)):
 
 
 #Отметка о готовности ремонта
-@router_repair.post('/{application_id}/repair', dependencies=[Depends(require_role("repairer"))], response_model=ApplicationShema, summary='Отметка о готовности ремонта')
-def status_repair(application_id: int, db: Session = Depends(get_db)):
-    return repair_info(application_id=application_id, db=db)
+@router_repair.post('/{application_id}/repair', response_model=ApplicationShema, summary='Отметка о готовности ремонта')
+def status_repair(application_id: int, payload: dict = Depends(require_role("repairer")), db: Session = Depends(get_db)):
+    return repair_info(application_id=application_id, employee_id=int(payload["sub"]), db=db)
 
 
 #Добавление запчасти в заявку, стоимость заявки пересчитывается автоматически

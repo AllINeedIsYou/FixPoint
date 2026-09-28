@@ -17,8 +17,12 @@ def perform_diagnostics(aplication_id:int, db:Session)->Application:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Невозможно выполнить действие: у заявки с id={aplication_id} не задан статус",
         )
-    else:
-        application.status_info+=1
+    elif application.status_info != 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Невозможно выполнить диагностику: заявка с id={aplication_id} уже прошла этап диагностики",
+        )
+    application.status_info+=1
     application.status='Диагностика завершена, Ожидание выполнения работы...'
     db.commit()
     db.refresh(application)

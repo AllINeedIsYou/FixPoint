@@ -6,7 +6,7 @@ from src.models import Application, Part
 from src.shemas import PartCreateShema
 
 #функция для работы(status_info)
-def repair_info(application_id:int,db:Session):
+def repair_info(application_id:int,employee_id:int,db:Session):
     repair_id=db.query(Application).filter(Application.id==application_id).first()
     if not repair_id:
         raise HTTPException(
@@ -23,8 +23,22 @@ def repair_info(application_id:int,db:Session):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Невозможно выполнить ремонт: заявка с id={application_id} не прошла этап диагностики",
         )
-    else:
-        repair_id.status_info+=1
+    elif repair_id.status_info > 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Невозможно выполнить ремонт: ремонт по заявке с id={application_id} уже завершён",
+        )
+    if repair_id.assignee_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Заявка с id={application_id} не взята в работу, сначала возьмите её",
+        )
+    if repair_id.assignee_id != employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Заявка с id={application_id} назначена другому мастеру",
+        )
+    repair_id.status_info+=1
     repair_id.status='Работы завершина. Ожидание выдачи клиенту'
     db.commit()
     db.refresh(repair_id)

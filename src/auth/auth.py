@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from src.databases.database import get_db
+from src.databases.database import get_db, settings
 from src.models import AccessCode
 from src.shemas import TokenResponseSchema
 from fastapi.security import HTTPBearer, OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -11,7 +11,7 @@ from fastapi.security import HTTPBearer, OAuth2PasswordBearer, OAuth2PasswordReq
 security = HTTPBearer()
 
 # Секретный ключ JWT
-SECRET_KEY = "SUPER_PUPER_SECRET_KEY_CHANGE_ME"
+SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
