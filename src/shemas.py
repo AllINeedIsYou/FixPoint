@@ -9,7 +9,7 @@ class ApplicationCreateShema(BaseModel):
     FIO: str
     number: PhoneNumber
     email: EmailStr
-    info: str = Field(max_length=100)
+    info: str = Field(max_length=1000)
 
 
 # Схема для запчасти(запрос на создание)

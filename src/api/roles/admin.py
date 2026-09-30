@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
-from src.api.services.services_admin import create_unique_access_code, dismissal_employee
+from src.api.services.services_admin import create_unique_access_code, dismissal_employee,hire_employee
 from src.databases.database import get_db, Base, engine
 from src.shemas import ApplicationShema, AccessCodeCreateSchema, AccessCodeResponseSchema
 from src.api.services.services import get_all_applications, get_all_accesscode
@@ -51,3 +51,8 @@ def generate_code_endpoint(data: AccessCodeCreateSchema,db: Session = Depends(ge
 @router_admin.patch('/{employee_id}/dismissal',summary='Увольнение работника, деактивация')
 def dismissal(employee_id:int ,db:Session=Depends(get_db)):
     return dismissal_employee(employee_id=employee_id,db=db)
+
+#Возвращение на работу
+@router_admin.patch('/{employee_id}/hier',summary='Возвращение работника на работу')
+def hire_worker(employee_id:int ,db:Session=Depends(get_db)):
+    return hire_employee(employee_id=employee_id,db=db)
