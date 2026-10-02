@@ -19,7 +19,7 @@ def get_application_repairer(db: Session = Depends(get_db)):
 
 
 #Отметка о готовности ремонта
-@router_repair.post('/{application_id}/repair', response_model=ApplicationShema, summary='Отметка о готовности ремонта')
+@router_repair.post('/{application_id}/repair', response_model=ApplicationShema, summary='Отметка о готовности ремонта', dependencies=[Depends(require_role("repairer"))])
 def status_repair(application_id: int, payload: dict = Depends(require_role("repairer")), db: Session = Depends(get_db)):
     return repair_info(application_id=application_id, employee_id=int(payload["sub"]), db=db)
 
@@ -37,7 +37,7 @@ def delete_part_from_application(application_id: int, part_id: int, db: Session 
 
 
 #Взять заявку в работу
-@router_repair.post('/{application_id}/take', response_model=ApplicationShema, summary='Взять заявку в работу')
+@router_repair.post('/{application_id}/take',dependencies=[Depends(require_role("repairer"))],response_model=ApplicationShema, summary='Взять заявку в работу')
 def take_application_endpoint(application_id: int, payload: dict = Depends(require_role("repairer")), db: Session = Depends(get_db)):
     employee_id = int(payload["sub"])
     return take_application(application_id=application_id, employee_id=employee_id, db=db)
