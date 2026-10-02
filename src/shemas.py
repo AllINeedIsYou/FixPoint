@@ -35,6 +35,7 @@ class ApplicationShema(ApplicationCreateShema):
     assignee_id: int | None = None
     parts: list[PartShema] = []
     total_cost: float = 0
+    diagnostic_result: str | None = Field(default=None)
 
 
 # Схема для запроса на создание кода

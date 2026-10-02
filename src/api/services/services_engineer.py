@@ -4,7 +4,7 @@ from starlette import status
 from src.models import Application
 
 #функция для диагностки(status_info)
-def perform_diagnostics(aplication_id:int, db:Session)->Application:
+def perform_diagnostics(aplication_id:int, diagnostic_info: str, db:Session):
     application=db.query(Application).filter(Application.id==aplication_id).first()
     if not application:
         raise HTTPException(
@@ -23,6 +23,7 @@ def perform_diagnostics(aplication_id:int, db:Session)->Application:
             detail=f"Невозможно выполнить диагностику: заявка с id={aplication_id} уже прошла этап диагностики",
         )
     application.status_info+=1
+    application.diagnostic_result=diagnostic_info
     application.status='Диагностика завершена, Ожидание выполнения работы...'
     db.commit()
     db.refresh(application)

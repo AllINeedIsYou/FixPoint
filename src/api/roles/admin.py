@@ -24,6 +24,7 @@ def get_all_accesscode_endpoint(db: Session=Depends(get_db)):
 # СОЗДАНИЕ ФАЙЛА С БД
 @router_admin.post('/database_create', summary='Создание базы данных')
 def create_bd():
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     return {"status": "database created"}
 

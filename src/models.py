@@ -20,6 +20,8 @@ class Application(Base):
 
     status:Mapped[str]=mapped_column(String(400),default='Заявка создана,Ожидание диагностки')
 
+    diagnostic_result:Mapped[str|None]=mapped_column(default=None)
+
     #мастер, взявший заявку в работу
     assignee_id: Mapped[int | None] = mapped_column(ForeignKey("access_codes.id"),nullable=True,default=None)
 
