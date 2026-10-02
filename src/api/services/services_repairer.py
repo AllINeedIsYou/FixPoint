@@ -100,8 +100,14 @@ def take_application(application_id: int, employee_id: int, db: Session):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Заявка с id={application_id} уже назначена другому мастеру"
         )
+    if application.status_info<1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Заявка с id={application_id} еще не прошла этап диагностики'
+        )
 
     application.assignee_id = employee_id
+    application.status='Заявка взята в работу. Ожидается выполнение...'
     db.commit()
     db.refresh(application)
     return application
