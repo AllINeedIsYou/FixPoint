@@ -4,7 +4,7 @@ from src.api.services.services import get_all_applications
 from src.auth.auth import require_role
 from src.databases.database import get_db
 from src.shemas import ApplicationShema, PartCreateShema
-from src.api.services.services_repairer import repair_info, add_part, delete_part, take_application
+from src.api.services.services_repairer import repair_info, add_part, delete_part, take_repairer_application
 
 router_repair=APIRouter(prefix='/repairer',tags=["Мастер по ремонту"])
 
@@ -37,9 +37,9 @@ def delete_part_from_application(application_id: int, part_id: int, db: Session 
 
 
 #Взять заявку в работу
-@router_repair.post('/{application_id}/take',dependencies=[Depends(require_role("repairer"))],response_model=ApplicationShema, summary='Взять заявку в работу')
+@router_repair.post('/{application_id}/takeRepair',dependencies=[Depends(require_role("repairer"))],response_model=ApplicationShema, summary='Взять заявку в работу')
 def take_application_endpoint(application_id: int, payload: dict = Depends(require_role("repairer")), db: Session = Depends(get_db)):
     employee_id = int(payload["sub"])
-    return take_application(application_id=application_id, employee_id=employee_id, db=db)
+    return take_repairer_application(application_id=application_id, employee_id=employee_id, db=db)
 
 

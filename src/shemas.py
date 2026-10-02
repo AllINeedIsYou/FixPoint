@@ -32,7 +32,8 @@ class ApplicationShema(ApplicationCreateShema):
     id: int
     status_info: int
     status: str
-    assignee_id: int | None = None
+    assignee_repairer_id: int | None = None
+    assignee_engineer_id: int | None = None
     parts: list[PartShema] = []
     total_cost: float = 0
     diagnostic_result: str | None = Field(default=None)

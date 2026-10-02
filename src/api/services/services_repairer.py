@@ -88,14 +88,14 @@ def delete_part(application_id: int, part_id: int, db: Session):
 
 
 #функция назначения мастера на заявку
-def take_application(application_id: int, employee_id: int, db: Session):
+def take_repairer_application(application_id: int, employee_id: int, db: Session):
     application = db.query(Application).filter(Application.id == application_id).first()
     if not application:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Заявка с id={application_id} не найдена"
         )
-    if application.assignee_id is not None:
+    if application.assignee_repairer_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Заявка с id={application_id} уже назначена другому мастеру"
@@ -106,7 +106,7 @@ def take_application(application_id: int, employee_id: int, db: Session):
             detail=f'Заявка с id={application_id} еще не прошла этап диагностики'
         )
 
-    application.assignee_id = employee_id
+    application.assignee_repairer_id = employee_id
     application.status='Заявка взята в работу. Ожидается выполнение...'
     db.commit()
     db.refresh(application)
