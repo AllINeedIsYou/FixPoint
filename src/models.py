@@ -24,6 +24,7 @@ class Application(Base):
 
     #мастер, взявший заявку в работу
     assignee_repairer_id: Mapped[int | None] = mapped_column(ForeignKey("access_codes.id"),nullable=True,default=None)
+
     assignee_engineer_id: Mapped[int | None] = mapped_column(ForeignKey("access_codes.id"), nullable=True, default=None)
 
     parts: Mapped[list["Part"]] = relationship(back_populates="application", cascade="all, delete-orphan")
