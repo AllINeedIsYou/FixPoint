@@ -20,20 +20,20 @@ def get_application_repairer(db: Session = Depends(get_db)):
 
 #Отметка о готовности ремонта
 @router_repair.post('/{application_id}/repair', response_model=ApplicationShema, summary='Отметка о готовности ремонта', dependencies=[Depends(require_role("repairer"))])
-def status_repair(application_id: int, payload: dict = Depends(require_role("repairer")), db: Session = Depends(get_db)):
-    return repair_info(application_id=application_id, employee_id=int(payload["sub"]), db=db)
+def status_repair(application_id: int,db: Session = Depends(get_db)):
+    return repair_info(application_id=application_id, db=db)
 
 
-#Добавление запчасти в заявку, стоимость заявки пересчитывается автоматически
-@router_repair.post('/{application_id}/parts', dependencies=[Depends(require_role("repairer"))], response_model=ApplicationShema, summary='Добавление запчасти')
-def add_part_to_application(application_id: int, part: PartCreateShema, db: Session = Depends(get_db)):
-    return add_part(application_id=application_id, part_data=part, db=db)
+# #Добавление запчасти в заявку, стоимость заявки пересчитывается автоматически
+# @router_repair.post('/{application_id}/parts', dependencies=[Depends(require_role("repairer"))], response_model=ApplicationShema, summary='Добавление запчасти')
+# def add_part_to_application(application_id: int, part: PartCreateShema, db: Session = Depends(get_db)):
+#     return add_part(application_id=application_id, part_data=part, db=db)
 
 
 #Удаление ошибочно добавленной запчасти
-@router_repair.delete('/{application_id}/parts/{part_id}', dependencies=[Depends(require_role("repairer"))], response_model=ApplicationShema, summary='Удаление запчасти')
-def delete_part_from_application(application_id: int, part_id: int, db: Session = Depends(get_db)):
-    return delete_part(application_id=application_id, part_id=part_id, db=db)
+# @router_repair.delete('/{application_id}/parts/{part_id}', dependencies=[Depends(require_role("repairer"))], response_model=ApplicationShema, summary='Удаление запчасти')
+# def delete_part_from_application(application_id: int, part_id: int, db: Session = Depends(get_db)):
+#     return delete_part(application_id=application_id, part_id=part_id, db=db)
 
 
 #Взять заявку в работу
