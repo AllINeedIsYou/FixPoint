@@ -1,21 +1,23 @@
 import hashlib
 from datetime import datetime, timedelta, timezone
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, status
 from sqlalchemy.orm import Session
 from src.databases.database import get_db, settings
 from src.models import AccessCode
 from src.shemas import TokenResponseSchema
-from fastapi.security import HTTPBearer, OAuth2PasswordBearer, OAuth2PasswordRequestForm
-
-security = HTTPBearer()
+from fastapi.security import OAuth2PasswordBearer
 
 # Секретный ключ JWT
 SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
-security = OAuth2PasswordBearer(tokenUrl="/auth/login")
+#описание видно в окне Authorize в swagger
+security = OAuth2PasswordBearer(
+    tokenUrl="/auth/login",
+    description="Вход по коду доступа сотрудника: введите код в поле **username**, поле **password** оставьте пустым.",
+)
 
 
 router_auth = APIRouter(prefix="/auth", tags=["Авторизация"])
@@ -38,9 +40,10 @@ def create_access_token(data: dict):
 
 #ВХОД
 @router_auth.post("/login",response_model=TokenResponseSchema,summary="Вход по уникальному коду",include_in_schema=False)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),db: Session = Depends(get_db)):
+#код приходит в поле username (так устроена форма входа OAuth2 в swagger), пароль не нужен и игнорируется
+def login_for_access_token(code: str = Form(alias="username"), db: Session = Depends(get_db)):
     #Хешируем код пользователя
-    hashed_input = hash_code(form_data.username)
+    hashed_input = hash_code(code)
     #сравниваем два хеша
     access_code_entry = (db.query(AccessCode).filter(AccessCode.code_hash == hashed_input).first())
     #Если пальчиком по буковке промазал

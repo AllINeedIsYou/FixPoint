@@ -1,43 +1,47 @@
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette import status
 
-from src.models import Application, Part
+from src.models import Application, Part, StockPart
 from src.shemas import PartCreateShema
 
-#функция для работы(status_info)
-def repair_info(application_id:int,db:Session):
-    repair_id=db.query(Application).filter(Application.id==application_id).first()
-    if not repair_id:
+
+#заявка, с которой мастер может работать прямо сейчас:
+#диагностика пройдена, ремонт не завершен, заявку взял именно этот мастер
+def get_application_in_repair(application_id: int, employee_id: int, db: Session, action: str) -> Application:
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Заявка с id={application_id} не найдена"
         )
-    if repair_id.status_info is None:
+    if application.status_info < 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Невозможно выполнить действие: у заявки с id={application_id} не задан статус",
+            detail=f"Невозможно {action}: заявка с id={application_id} не прошла этап диагностики",
         )
-    elif repair_id.status_info < 1:
+    if application.status_info > 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Невозможно выполнить ремонт: заявка с id={application_id} не прошла этап диагностики",
+            detail=f"Невозможно {action}: ремонт по заявке с id={application_id} уже завершён",
         )
-    elif repair_id.status_info > 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Невозможно выполнить ремонт: ремонт по заявке с id={application_id} уже завершён",
-        )
-    if repair_id.assignee_repairer_id is None:
+    if application.assignee_repairer_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Заявка с id={application_id} не взята в работу, сначала возьмите её",
         )
-    # if repair_id.assignee_repairer_id != employee_id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail=f"Заявка с id={application_id} назначена другому мастеру",
-    #     )
+    if application.assignee_repairer_id != employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Заявка с id={application_id} назначена другому мастеру",
+        )
+    return application
+
+
+#функция для работы(status_info)
+def repair_info(application_id:int,employee_id:int,db:Session):
+    repair_id = get_application_in_repair(application_id, employee_id, db, action="выполнить ремонт")
     repair_id.status_info+=1
     repair_id.status='Работы завершина. Ожидание выдачи клиенту'
     db.commit()
@@ -45,19 +49,34 @@ def repair_info(application_id:int,db:Session):
     return repair_id
 
 
-#функция добавления запчасти в заявку (стоимость заявки считается суммой запчастей)
-def add_part(application_id: int, part_data: PartCreateShema, db: Session):
-    application = db.query(Application).filter(Application.id == application_id).first()
-    if not application:
+#мастер списывает запчасть со склада на заявку, цена берется со склада
+def add_part(application_id: int, employee_id: int, part_data: PartCreateShema, db: Session):
+    application = get_application_in_repair(application_id, employee_id, db, action="добавить запчасть")
+
+    name = part_data.name.strip()
+    stock_part = (
+        db.query(StockPart)
+        .filter(func.lower(StockPart.name) == name.lower())
+        .with_for_update()
+        .first()
+    )
+    if not stock_part:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Заявка с id={application_id} не найдена"
+            detail=f"Запчасти '{name}' нет на складе"
+        )
+    if stock_part.quantity < part_data.quantity:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Недостаточно на складе: '{stock_part.name}' осталось {stock_part.quantity} шт., нужно {part_data.quantity}"
         )
 
+    stock_part.quantity -= part_data.quantity
     new_part = Part(
         application_id=application_id,
-        name=part_data.name,
-        price=part_data.price,
+        stock_part_id=stock_part.id,
+        name=stock_part.name,
+        price=stock_part.price,
         quantity=part_data.quantity,
     )
 
@@ -67,8 +86,9 @@ def add_part(application_id: int, part_data: PartCreateShema, db: Session):
     return application
 
 
-#функция удаления ошибочно добавленной запчасти
-def delete_part(application_id: int, part_id: int, db: Session):
+#удаление ошибочно добавленной запчасти, количество возвращается на склад
+def delete_part(application_id: int, part_id: int, employee_id: int, db: Session):
+    get_application_in_repair(application_id, employee_id, db, action="удалить запчасть")
     part = (
         db.query(Part)
         .filter(Part.id == part_id, Part.application_id == application_id)
@@ -79,6 +99,16 @@ def delete_part(application_id: int, part_id: int, db: Session):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Запчасть с id={part_id} не найдена у заявки с id={application_id}"
         )
+
+    if part.stock_part_id is not None:
+        stock_part = (
+            db.query(StockPart)
+            .filter(StockPart.id == part.stock_part_id)
+            .with_for_update()
+            .first()
+        )
+        if stock_part:
+            stock_part.quantity += part.quantity
 
     application = part.application
     db.delete(part)

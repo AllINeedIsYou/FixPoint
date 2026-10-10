@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from starlette import status
 from src.models import Application
 
-#функция для диагностки(status_info)
-def perform_diagnostics(aplication_id:int, diagnostic_info: str, db:Session):
+#функция для диагностки(status_info), отметить диагностику может только мастер диагностики, который взял заявку
+def perform_diagnostics(aplication_id:int, employee_id: int, diagnostic_info: str, db:Session):
     application=db.query(Application).filter(Application.id==aplication_id).first()
     if not application:
         raise HTTPException(
@@ -21,6 +21,16 @@ def perform_diagnostics(aplication_id:int, diagnostic_info: str, db:Session):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Невозможно выполнить диагностику: заявка с id={aplication_id} уже прошла этап диагностики",
+        )
+    if application.assignee_engineer_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Заявка с id={aplication_id} не взята в диагностику, сначала возьмите её",
+        )
+    if application.assignee_engineer_id != employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Заявка с id={aplication_id} назначена другому мастеру диагностики",
         )
     application.status_info+=1
     application.diagnostic_result=diagnostic_info

@@ -2,6 +2,9 @@ from sqlalchemy import String, Text, Integer, Numeric, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.databases.database import Base
 
+#фиксированная стоимость работы мастера, добавляется к стоимости запчастей
+WORK_COST = 5000
+
 #таблица с заявками
 class Application(Base):
     __tablename__ = "applications"
@@ -29,13 +32,35 @@ class Application(Base):
 
     parts: Mapped[list["Part"]] = relationship(back_populates="application", cascade="all, delete-orphan")
 
-    #стоимость заявки - сумма стоимости всех запчастей
+    #стоимость запчастей по заявке
     @property
-    def total_cost(self) -> float:
+    def parts_cost(self) -> float:
         return sum(part.price * part.quantity for part in self.parts)
 
+    @property
+    def work_cost(self) -> int:
+        return WORK_COST
 
-#таблица с запчастями, использованными в ремонте
+    #итоговая стоимость: запчасти + работа
+    @property
+    def total_cost(self) -> float:
+        return self.parts_cost + self.work_cost
+
+
+#общий склад запчастей, цены и остатки ведет админ
+class StockPart(Base):
+    __tablename__ = "stock_parts"
+
+    id: Mapped[int] = mapped_column(primary_key=True,autoincrement=True)
+
+    name: Mapped[str] = mapped_column(String(255),nullable=False,unique=True)
+
+    price: Mapped[float] = mapped_column(Numeric(10,2),nullable=False)
+
+    quantity: Mapped[int] = mapped_column(Integer,default=0,nullable=False)
+
+
+#запчасти, списанные со склада на заявку
 class Part(Base):
     __tablename__ = "parts"
 
@@ -43,6 +68,10 @@ class Part(Base):
 
     application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"),nullable=False)
 
+    stock_part_id: Mapped[int | None] = mapped_column(ForeignKey("stock_parts.id"),nullable=True)
+
+    #название и цена копируются со склада в момент списания,
+    #чтобы смена цены на складе не меняла стоимость уже идущих ремонтов
     name: Mapped[str] = mapped_column(String(255),nullable=False)
 
     price: Mapped[float] = mapped_column(Numeric(10,2),nullable=False)

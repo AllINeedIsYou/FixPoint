@@ -23,8 +23,8 @@ def get_application_engineer(db: Session = Depends(get_db)):
 
 # отмечаем диагностику
 @router_eng.post('/{application_id}/diagnose', response_model=ApplicationShema, summary='Отметка о готовности диагностики', dependencies=[Depends(require_role("engineer"))])
-def diagnostics_complete(application_id: int,diagnostic_info: str,db: Session = Depends(get_db)):
-    return perform_diagnostics(aplication_id=application_id,diagnostic_info=diagnostic_info,db=db)
+def diagnostics_complete(application_id: int,diagnostic_info: str, payload: dict = Depends(require_role("engineer")), db: Session = Depends(get_db)):
+    return perform_diagnostics(aplication_id=application_id,employee_id=int(payload["sub"]),diagnostic_info=diagnostic_info,db=db)
 
 
 #Взять заявку в работу
