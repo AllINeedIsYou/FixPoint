@@ -1,0 +1,31 @@
+
+:root {
+  /* Основной шрифт и цвета всего приложения */
+  font-family: Arial, sans-serif;
+  color: #243b53;
+  background: #f4f8fc;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Учитываетт границы и отступы внутри размеров элементов */
+* {
+  box-sizing: border-box;
+}
+
+/* Базовые настройки страниццыы */
+html,
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Цвет и фон всего сайта */
+body {
+  color: #243b53;
+  background: #f4f8fc;
+}
