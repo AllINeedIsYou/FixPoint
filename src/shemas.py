@@ -32,6 +32,8 @@ class ApplicationCreateShema(BaseModel):
     number: PhoneNumber
     email: EmailStr
     info: CleanStr = Field(max_length=1000)
+    device: CleanStr = Field(max_length=1000)
+    device_model: CleanStr = Field(max_length=1000)
 
 
 # Схема для запчасти на складе(админ добавляет), пробелы по краям названия обрезаются

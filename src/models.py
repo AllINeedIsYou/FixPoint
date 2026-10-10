@@ -59,6 +59,10 @@ class Application(Base):
 
     info: Mapped[str] = mapped_column(Text,nullable=False)
 
+    device: Mapped[str] = mapped_column(Text,nullable=False)
+
+    device_model: Mapped[str] = mapped_column(Text,nullable=False)
+
     status_info: Mapped[int]=mapped_column(Integer,default=Stage.CREATED)
 
     status:Mapped[str]=mapped_column(String(400),default=STATUS_CREATED)
