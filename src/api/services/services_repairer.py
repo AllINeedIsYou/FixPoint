@@ -3,7 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette import status
 
-from src.models import Application, Part, StockPart
+from src.models import Application, Part, StockPart, Stage, STATUS_DIAGNOSED, STATUS_REPAIR_TAKEN, STATUS_REPAIRED
 from src.shemas import PartCreateShema
 
 
@@ -18,12 +18,12 @@ def get_application_in_repair(application_id: int, employee_id: int, db: Session
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Заявка с id={application_id} не найдена"
         )
-    if application.status_info < 1:
+    if application.status_info < Stage.DIAGNOSED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Невозможно {action}: заявка с id={application_id} не прошла этап диагностики",
         )
-    if application.status_info > 1:
+    if application.status_info > Stage.DIAGNOSED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Невозможно {action}: ремонт по заявке с id={application_id} уже завершён",
@@ -44,8 +44,8 @@ def get_application_in_repair(application_id: int, employee_id: int, db: Session
 #функция для работы(status_info)
 def repair_info(application_id:int,employee_id:int,db:Session):
     repair_id = get_application_in_repair(application_id, employee_id, db, action="выполнить ремонт")
-    repair_id.status_info+=1
-    repair_id.status='Работы завершина. Ожидание выдачи клиенту'
+    repair_id.status_info=Stage.REPAIRED
+    repair_id.status=STATUS_REPAIRED
     db.commit()
     db.refresh(repair_id)
     return repair_id
@@ -133,14 +133,30 @@ def take_repairer_application(application_id: int, employee_id: int, db: Session
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Заявка с id={application_id} уже назначена другому мастеру"
         )
-    if application.status_info<1:
+    if application.status_info<Stage.DIAGNOSED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Заявка с id={application_id} еще не прошла этап диагностики'
         )
+    if application.status_info>Stage.DIAGNOSED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Ремонт по заявке с id={application_id} уже завершён'
+        )
 
     application.assignee_repairer_id = employee_id
-    application.status='Заявка взята в работу. Ожидается выполнение...'
+    application.status=STATUS_REPAIR_TAKEN
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+#мастер отказывается от взятой заявки (до завершения ремонта), ее может взять другой мастер.
+#списанные запчасти остаются в заявке
+def release_repairer_application(application_id: int, employee_id: int, db: Session):
+    application = get_application_in_repair(application_id, employee_id, db, action="отказаться от заявки")
+    application.assignee_repairer_id = None
+    application.status = STATUS_DIAGNOSED
     db.commit()
     db.refresh(application)
     return application

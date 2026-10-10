@@ -6,7 +6,7 @@ from src.shemas import StockPartShema, CleanStr
 from src.auth.auth import require_role
 from src.databases.database import get_db
 from src.shemas import ApplicationShema, PartCreateShema
-from src.api.services.services_repairer import repair_info, add_part, delete_part, take_repairer_application
+from src.api.services.services_repairer import repair_info, add_part, delete_part, take_repairer_application, release_repairer_application
 
 router_repair=APIRouter(prefix='/repairer',tags=["Мастер по ремонту"])
 
@@ -51,3 +51,7 @@ def take_application_endpoint(application_id: int, payload: dict = Depends(requi
     return take_repairer_application(application_id=application_id, employee_id=employee_id, db=db)
 
 
+#Отказаться от взятой заявки до завершения ремонта, списанные запчасти остаются в заявке
+@router_repair.post('/{application_id}/release', response_model=ApplicationShema, summary='Отказаться от заявки')
+def release_application_endpoint(application_id: int, payload: dict = Depends(require_role("repairer")), db: Session = Depends(get_db)):
+    return release_repairer_application(application_id=application_id, employee_id=int(payload["sub"]), db=db)

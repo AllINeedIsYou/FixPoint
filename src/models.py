@@ -1,9 +1,28 @@
+from enum import IntEnum
 from sqlalchemy import String, Text, Integer, Numeric, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.databases.database import Base
 
 #фиксированная стоимость работы мастера, добавляется к стоимости запчастей
 WORK_COST = 5000
+
+
+#этапы заявки (поле status_info), в БД хранится число
+class Stage(IntEnum):
+    CREATED = 0     #заявка создана, ждет диагностики
+    DIAGNOSED = 1   #диагностика завершена, ждет ремонта
+    REPAIRED = 2    #ремонт завершен, ждет выдачи клиенту
+    ISSUED = 3      #устройство выдано клиенту, заявка закрыта
+
+
+#тексты статусов (поле status), их видит клиент
+STATUS_CREATED = 'Заявка создана. Ожидание диагностики'
+STATUS_DIAGNOSTICS_TAKEN = 'Заявка взята в диагностику. Ожидается выполнение...'
+STATUS_DIAGNOSED = 'Диагностика завершена. Ожидание выполнения работы...'
+STATUS_REPAIR_TAKEN = 'Заявка взята в работу. Ожидается выполнение...'
+STATUS_REPAIRED = 'Работы завершены. Ожидание выдачи клиенту'
+STATUS_ISSUED = 'Устройство выдано клиенту. Заявка закрыта'
+
 
 #таблица с заявками
 class Application(Base):
@@ -19,9 +38,9 @@ class Application(Base):
 
     info: Mapped[str] = mapped_column(Text,nullable=False)
 
-    status_info: Mapped[int]=mapped_column(Integer,default=0)
+    status_info: Mapped[int]=mapped_column(Integer,default=Stage.CREATED)
 
-    status:Mapped[str]=mapped_column(String(400),default='Заявка создана,Ожидание диагностки')
+    status:Mapped[str]=mapped_column(String(400),default=STATUS_CREATED)
 
     diagnostic_result:Mapped[str|None]=mapped_column(default=None)
 

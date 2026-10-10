@@ -78,6 +78,13 @@ class PartShema(BaseModel):
     quantity: int
 
 
+# Схема для отметки диагностики(инженер пишет результат), пробелы по краям обрезаются
+class DiagnosticsShema(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    diagnostic_info: CleanStr = Field(min_length=1, max_length=1000)
+
+
 class ApplicationShema(ApplicationCreateShema):
     model_config = ConfigDict(from_attributes=True)
 
