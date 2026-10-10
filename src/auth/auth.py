@@ -73,10 +73,21 @@ def login_for_access_token(code: str = Form(alias="username"), db: Session = Dep
 
 #ПРОВЕРКА ВАЛИДНОСТИ ТОКЕНА jwt
 def require_role(required_role: str):
-    def dependency(token: str = Depends(security)):
+    def dependency(token: str = Depends(security), db: Session = Depends(get_db)):
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             user_role: str = payload.get("role")
+
+            #токен живет 24 часа, поэтому уволенного проверяем по БД на каждом запросе, а не только при входе
+            employee_id = payload.get("sub")
+            employee = None
+            if isinstance(employee_id, str) and employee_id.isdigit():
+                employee = db.query(AccessCode).filter(AccessCode.id == int(employee_id)).first()
+            if employee is None or not employee.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Сотрудник не найден или уволен, войдите заново",
+                )
 
             if user_role is None:
                 raise HTTPException(

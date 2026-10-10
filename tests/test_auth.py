@@ -39,3 +39,25 @@ def test_dismissed_employee_cannot_login(client, code):
 def test_swagger_shows_login_hint(client):
     scheme = client.get("/openapi.json").json()["components"]["securitySchemes"]["OAuth2PasswordBearer"]
     assert "оставьте пустым" in scheme["description"]
+
+
+def test_dismissed_employee_token_stops_working(client, code):
+    token = client.post("/auth/login", data={"username": code}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    employee_id = client.get("/services/get_accesscode").json()[0]["id"]
+    assert client.get("/repairer/get_applications", headers=headers).status_code == 200
+
+    client.patch(f"/services/{employee_id}/dismissal")
+    r = client.get("/repairer/get_applications", headers=headers)
+    assert r.status_code == 401 and "уволен" in r.json()["detail"]
+
+    client.patch(f"/services/{employee_id}/hier")
+    assert client.get("/repairer/get_applications", headers=headers).status_code == 200
+
+
+def test_token_of_deleted_or_fake_employee(client):
+    from src.auth.auth import create_access_token
+    for sub in ["999", "abc", None]:
+        data = {"role": "repairer"} if sub is None else {"sub": sub, "role": "repairer"}
+        headers = {"Authorization": f"Bearer {create_access_token(data)}"}
+        assert client.get("/repairer/get_applications", headers=headers).status_code == 401
