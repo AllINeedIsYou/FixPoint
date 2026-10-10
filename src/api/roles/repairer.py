@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from src.api.services.services import get_all_applications
+from src.api.services.services import get_all_applications,get_all_parts
 from src.api.services.services_stock import get_stock
 from src.shemas import StockPartShema, CleanStr
 from src.auth.auth import require_role
@@ -20,11 +20,14 @@ def get_application_repairer(db: Session = Depends(get_db)):
     return get_all_applications(db=db)
 
 
-#Просмотр склада, чтобы знать какие запчасти можно взять
-@router_repair.get("/stock", response_model=list[StockPartShema], dependencies=[Depends(require_role("repairer"))], summary="Склад запчастей")
+#Поиск по складу запчастей
+@router_repair.get("/find_stock", response_model=list[StockPartShema], dependencies=[Depends(require_role("repairer"))], summary="Поиск по складу запчастей")
 def get_stock_repairer(search: CleanStr | None = None, db: Session = Depends(get_db)):
     return get_stock(db=db, search=search)
-
+#СКЛАД: СПИСОК ЗАПЧАСТЕЙ
+@router_repair.get('/stocks',dependencies=[Depends(require_role("repairer"))], summary="Склад запчастей")
+def get_stocks(db: Session = Depends(get_db)):
+    return get_all_parts(db=db)
 
 #Отметка о готовности ремонта
 @router_repair.post('/{application_id}/repair', response_model=ApplicationShema, summary='Отметка о готовности ремонта', dependencies=[Depends(require_role("repairer"))])

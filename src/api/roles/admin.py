@@ -4,7 +4,7 @@ from starlette import status
 from src.api.services.services_admin import create_unique_access_code, dismissal_employee,hire_employee,release_application
 from src.databases.database import get_db, Base, engine
 from src.shemas import ApplicationShema, AccessCodeCreateSchema, AccessCodeResponseSchema
-from src.api.services.services import get_all_applications, get_all_accesscode
+from src.api.services.services import get_all_applications, get_all_accesscode, get_all_parts
 from src.api.services.services_stock import get_stock, create_stock_part, update_stock_part
 from src.shemas import StockPartShema, StockPartCreateShema, StockPartUpdateShema, CleanStr
 
@@ -59,10 +59,13 @@ def dismissal(employee_id:int ,db:Session=Depends(get_db)):
 @router_admin.patch('/{employee_id}/hier',summary='Возвращение работника на работу')
 def hire_worker(employee_id:int ,db:Session=Depends(get_db)):
     return hire_employee(employee_id=employee_id,db=db)
-
-
 #СКЛАД: СПИСОК ЗАПЧАСТЕЙ
-@router_admin.get('/stock', response_model=list[StockPartShema], summary='Склад запчастей')
+@router_admin.get('/stocks', summary="Склад запчастей")
+def get_stocks(db: Session = Depends(get_db)):
+    return get_all_parts(db=db)
+
+#Поиск по складу запчастей
+@router_admin.get('/stock', response_model=list[StockPartShema], summary='Поиск по складу запчастей')
 def get_stock_admin(search: CleanStr | None = None, db: Session = Depends(get_db)):
     return get_stock(db=db, search=search)
 
