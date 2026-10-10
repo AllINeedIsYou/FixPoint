@@ -319,3 +319,7 @@ MVP версия.
 ## 📌 Автор
 
 ALLINeedIsYou
+
+## 🤝 Помощник
+
+GuLiKK
