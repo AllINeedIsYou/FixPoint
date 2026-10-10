@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
-from src.api.services.services_admin import create_unique_access_code, dismissal_employee,hire_employee
+from src.api.services.services_admin import create_unique_access_code, dismissal_employee,hire_employee,release_application
 from src.databases.database import get_db, Base, engine
 from src.shemas import ApplicationShema, AccessCodeCreateSchema, AccessCodeResponseSchema
 from src.api.services.services import get_all_applications, get_all_accesscode
@@ -75,3 +75,8 @@ def create_stock_part_endpoint(data: StockPartCreateShema, db: Session = Depends
 @router_admin.patch('/stock/{stock_part_id}', response_model=StockPartShema, summary='Изменить цену или количество на складе')
 def update_stock_part_endpoint(stock_part_id: int, data: StockPartUpdateShema, db: Session = Depends(get_db)):
     return update_stock_part(stock_part_id=stock_part_id, data=data, db=db)
+
+#Снять бронь с заявки, если сотрудник не может ее выполнить: снимается инженер (на диагностике) или мастер (на ремонте)
+@router_admin.post('/{application_id}/release', response_model=ApplicationShema, summary='Снять исполнителя с заявки')
+def release_application_endpoint(application_id: int, db: Session = Depends(get_db)):
+    return release_application(application_id=application_id, db=db)

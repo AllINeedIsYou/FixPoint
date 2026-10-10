@@ -3,7 +3,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
 from src.api.services.services import generate_access_code, hash_code
-from src.models import AccessCode
+from src.api.services.services_operator import get_application_for_update
+from src.models import AccessCode, Stage, STATUS_DIAGNOSED
 
 
 #создание и проверка кода+сохранение
@@ -93,3 +94,26 @@ def hire_employee(employee_id: int, db: Session):
         'status':'success',
         'message': employee_status
     }
+
+
+#админ снимает бронь с заявки, если сотрудник не может ее выполнить (заболел, уволился):
+#на диагностике и проверке снимается инженер, на ремонте мастер. после этого заявку может взять другой сотрудник
+def release_application(application_id: int, db: Session):
+    application = get_application_for_update(application_id, db)
+    if application.status_info == Stage.CREATED and application.assignee_engineer_id is not None:
+        application.assignee_engineer_id = None
+        application.status = application.waiting_diagnostics_status()
+    elif application.status_info == Stage.DIAGNOSED and application.assignee_repairer_id is not None:
+        application.assignee_repairer_id = None
+        application.status = STATUS_DIAGNOSED
+    elif application.status_info == Stage.REPAIRED and application.assignee_engineer_id is not None:
+        application.assignee_engineer_id = None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Заявка с id={application_id} сейчас никем не забронирована"
+        )
+
+    db.commit()
+    db.refresh(application)
+    return application

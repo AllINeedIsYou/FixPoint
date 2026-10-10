@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.api.services.services import get_all_applications
-from src.api.services.services_operator import (del_elements_aplication_by_id, issue_application, release_application,
+from src.api.services.services_operator import (del_elements_aplication_by_id, issue_application,
                                                create_application, get_clients, get_client_applications)
 from src.auth.auth import require_role
 from src.shemas import ApplicationCreateShema, ApplicationShema, ClientShema
@@ -44,12 +44,6 @@ def del_aplication(application_id:int, db:Session=Depends(get_db)):
 @router_operator.post('/{application_id}/issue', response_model=ApplicationShema, summary='Выдача устройства клиенту', dependencies=[Depends(require_role("operator"))])
 def issue_application_endpoint(application_id: int, db: Session = Depends(get_db)):
     return issue_application(application_id=application_id, db=db)
-
-
-#Снять бронь с заявки, если сотрудник не может ее выполнить: снимается инженер (на диагностике) или мастер (на ремонте)
-@router_operator.post('/{application_id}/release', response_model=ApplicationShema, summary='Снять исполнителя с заявки', dependencies=[Depends(require_role("operator"))])
-def release_application_endpoint(application_id: int, db: Session = Depends(get_db)):
-    return release_application(application_id=application_id, db=db)
 
 
 #Список клиентов с id их заявок, поиск по части ФИО или телефона
