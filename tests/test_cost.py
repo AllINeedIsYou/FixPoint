@@ -1,17 +1,17 @@
 import pytest
 
 from conftest import get_application
-from src.models import WORK_COST, Application, Part
+from src.models import WORK_COST, Application, Client, Part
 
 
 def test_cost_without_parts_is_work_only():
-    application = Application(FIO="Иван", number="+79161234567", email="i@example.com", info="x")
+    application = Application(client=Client(FIO="Иван", number="+79161234567", email="i@example.com"), info="x")
     assert application.parts_cost == 0
     assert application.total_cost == WORK_COST
 
 
 def test_cost_sums_parts_with_quantity_plus_work():
-    application = Application(FIO="Иван", number="+79161234567", email="i@example.com", info="x")
+    application = Application(client=Client(FIO="Иван", number="+79161234567", email="i@example.com"), info="x")
     application.parts = [Part(name="Экран", price=3000, quantity=1), Part(name="Провода", price=50, quantity=5)]
     assert application.parts_cost == 3250
     assert application.total_cost == 3250 + WORK_COST

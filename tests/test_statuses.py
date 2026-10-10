@@ -1,6 +1,6 @@
-from conftest import diagnose, get_application, take_and_diagnose
+from conftest import check, diagnose, get_application, repair_and_check, take_and_diagnose
 from src.models import (Stage, STATUS_CREATED, STATUS_DIAGNOSTICS_TAKEN, STATUS_DIAGNOSED, STATUS_REPAIR_TAKEN,
-                        STATUS_REPAIRED, STATUS_ISSUED)
+                        STATUS_REPAIRED, STATUS_CHECKED, STATUS_CHECK_FAILED, STATUS_ISSUED)
 
 
 def test_full_flow(client, staff, new_application):
@@ -22,6 +22,10 @@ def test_full_flow(client, staff, new_application):
 
     r = client.post(f"/repairer/{app_id}/repair", headers=staff["repairer"])
     assert r.status_code == 200 and r.json()["status_info"] == Stage.REPAIRED and r.json()["status"] == STATUS_REPAIRED
+
+    r = check(client, staff["engineer"], app_id, comment="всё работает")
+    assert r.status_code == 200 and r.json()["status_info"] == Stage.CHECKED and r.json()["status"] == STATUS_CHECKED
+    assert r.json()["check_result"] == "всё работает"
 
     r = client.post(f"/operator/{app_id}/issue", headers=staff["operator"])
     assert r.status_code == 200 and r.json()["status_info"] == Stage.ISSUED and r.json()["status"] == STATUS_ISSUED
@@ -111,7 +115,8 @@ def test_booking_only_engineer_role(client, staff, new_application):
 
 
 def test_status_texts_have_no_typos():
-    texts = [STATUS_CREATED, STATUS_DIAGNOSTICS_TAKEN, STATUS_DIAGNOSED, STATUS_REPAIR_TAKEN, STATUS_REPAIRED, STATUS_ISSUED]
+    texts = [STATUS_CREATED, STATUS_DIAGNOSTICS_TAKEN, STATUS_DIAGNOSED, STATUS_REPAIR_TAKEN, STATUS_REPAIRED,
+             STATUS_CHECKED, STATUS_CHECK_FAILED, STATUS_ISSUED]
     assert not any(typo in text for text in texts for typo in ["завершина", "диагностки", " .", ",О"])
 
 
@@ -129,7 +134,7 @@ def test_issue_only_after_repair(client, staff, new_application, application_in_
 
 
 def test_repeat_issue_forbidden(client, staff, application_in_repair):
-    client.post(f"/repairer/{application_in_repair}/repair", headers=staff["repairer"])
+    repair_and_check(client, staff, application_in_repair)
     assert client.post(f"/operator/{application_in_repair}/issue", headers=staff["operator"]).status_code == 200
     r = client.post(f"/operator/{application_in_repair}/issue", headers=staff["operator"])
     assert r.status_code == 400 and "уже выдано" in r.json()["detail"]
@@ -137,7 +142,7 @@ def test_repeat_issue_forbidden(client, staff, application_in_repair):
 
 def test_issued_application_is_closed(client, staff, stock, application_in_repair):
     stock("Провода", 50, 10)
-    client.post(f"/repairer/{application_in_repair}/repair", headers=staff["repairer"])
+    repair_and_check(client, staff, application_in_repair)
     client.post(f"/operator/{application_in_repair}/issue", headers=staff["operator"])
 
     assert client.post(f"/repairer/{application_in_repair}/repair", headers=staff["repairer"]).status_code == 400
@@ -145,6 +150,7 @@ def test_issued_application_is_closed(client, staff, stock, application_in_repai
     assert r.status_code == 400
     assert client.post(f"/repairer/{application_in_repair}/release", headers=staff["repairer"]).status_code == 400
     assert client.post(f"/operator/{application_in_repair}/release", headers=staff["operator"]).status_code == 400
+    assert check(client, staff["engineer"], application_in_repair).status_code == 400
     assert get_application(client, staff["repairer"], application_in_repair)["status_info"] == Stage.ISSUED
 
 

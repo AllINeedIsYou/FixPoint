@@ -1,5 +1,5 @@
 from typing import Annotated
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, model_validator
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
@@ -85,10 +85,26 @@ class DiagnosticsShema(BaseModel):
     diagnostic_info: CleanStr = Field(min_length=1, max_length=1000)
 
 
+# Схема для проверки ремонта инженером: при провале нужно написать, что не так
+class CheckShema(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    passed: bool
+    comment: CleanStr | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def comment_required_on_fail(self):
+        if not self.passed and not self.comment:
+            raise ValueError("если проверка не пройдена, укажите в comment, что не так")
+        return self
+
+
 class ApplicationShema(ApplicationCreateShema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    client_id: int
+    check_result: str | None = None
     status_info: int
     status: str
     assignee_repairer_id: int | None = None
@@ -98,6 +114,17 @@ class ApplicationShema(ApplicationCreateShema):
     work_cost: float = 0
     total_cost: float = 0
     diagnostic_result: str | None = Field(default=None)
+
+
+# Схема клиента для оператора, с id всех его заявок
+class ClientShema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    FIO: str
+    number: str
+    email: str
+    application_ids: list[int]
 
 
 # Схема для запроса на создание кода

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.api.services.services import get_all_applications
-from src.api.services.services_engineer import perform_diagnostics, take_engineer_application, release_engineer_application
+from src.api.services.services_engineer import perform_diagnostics, take_engineer_application, release_engineer_application, check_repair
 from src.auth.auth import require_role
 from src.databases.database import get_db
-from src.shemas import ApplicationShema, DiagnosticsShema
+from src.shemas import ApplicationShema, CheckShema, DiagnosticsShema
 
 
 router_eng = APIRouter(prefix="/engineer", tags=["Инженер"])
@@ -27,14 +27,20 @@ def diagnostics_complete(application_id: int, data: DiagnosticsShema, payload: d
     return perform_diagnostics(aplication_id=application_id,employee_id=int(payload["sub"]),diagnostic_info=data.diagnostic_info,db=db)
 
 
-#Взять заявку в работу
+#Взять заявку на диагностику (или на проверку, если оператор снял прежнего инженера)
 @router_eng.post('/{application_id}/takeEngineer',dependencies=[Depends(require_role("engineer"))],response_model=ApplicationShema, summary='Взять заявку в работу')
 def take_application_endpoint(application_id: int, payload: dict = Depends(require_role("engineer")), db: Session = Depends(get_db)):
     employee_id = int(payload["sub"])
     return take_engineer_application(application_id=application_id, employee_id=employee_id, db=db)
 
 
-#Отказаться от забронированной заявки до завершения диагностики
+#Отказаться от забронированной заявки (на диагностике или на проверке)
 @router_eng.post('/{application_id}/release', response_model=ApplicationShema, summary='Снять бронь с заявки')
 def release_application_endpoint(application_id: int, payload: dict = Depends(require_role("engineer")), db: Session = Depends(get_db)):
     return release_engineer_application(application_id=application_id, employee_id=int(payload["sub"]), db=db)
+
+
+#Проверка ремонта инженером заявки: passed=true - готово к выдаче, false - на повторную диагностику (comment обязателен)
+@router_eng.post('/{application_id}/check', response_model=ApplicationShema, summary='Проверка ремонта')
+def check_repair_endpoint(application_id: int, data: CheckShema, payload: dict = Depends(require_role("engineer")), db: Session = Depends(get_db)):
+    return check_repair(application_id=application_id, employee_id=int(payload["sub"]), passed=data.passed, comment=data.comment, db=db)

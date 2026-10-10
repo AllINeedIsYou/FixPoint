@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.api.services.services import get_all_applications
-from src.api.services.services_operator import  del_elements_aplication_by_id, issue_application, release_application
+from src.api.services.services_operator import (del_elements_aplication_by_id, issue_application, release_application,
+                                               create_application, get_clients, get_client_applications)
 from src.auth.auth import require_role
-from src.shemas import ApplicationCreateShema,ApplicationShema
+from src.shemas import ApplicationCreateShema, ApplicationShema, ClientShema
 from src.databases.database import get_db
-from src.models import Application
 
 #номер оператора для связи клиента с оператором
 phone_operator='+71234567890'
@@ -24,20 +24,11 @@ def add_application(
     application: ApplicationCreateShema,
     db: Session = Depends(get_db)
 ):
-    new_application = Application(
-        FIO=application.FIO,
-        number=str(application.number),
-        email=str(application.email),
-        info=application.info,
-    )
-
-    db.add(new_application)
-    db.commit()
-    db.refresh(new_application)
-
+    new_application = create_application(data=application, db=db)
     return {
         "status": "application added",
-        "id": new_application.id
+        "id": new_application.id,
+        "client_id": new_application.client_id,
     }
 
 @router_operator.get("/get_applications",response_model=list[ApplicationShema],summary="Список заявок", dependencies=[Depends(require_role("operator"))])
@@ -59,3 +50,15 @@ def issue_application_endpoint(application_id: int, db: Session = Depends(get_db
 @router_operator.post('/{application_id}/release', response_model=ApplicationShema, summary='Снять исполнителя с заявки', dependencies=[Depends(require_role("operator"))])
 def release_application_endpoint(application_id: int, db: Session = Depends(get_db)):
     return release_application(application_id=application_id, db=db)
+
+
+#Список клиентов с id их заявок, поиск по части ФИО или телефона
+@router_operator.get('/clients', response_model=list[ClientShema], summary='Список клиентов', dependencies=[Depends(require_role("operator"))])
+def get_clients_endpoint(search: str | None = None, db: Session = Depends(get_db)):
+    return get_clients(db=db, search=search)
+
+
+#История обращений клиента: все его заявки
+@router_operator.get('/clients/{client_id}/applications', response_model=list[ApplicationShema], summary='Заявки клиента', dependencies=[Depends(require_role("operator"))])
+def get_client_applications_endpoint(client_id: int, db: Session = Depends(get_db)):
+    return get_client_applications(client_id=client_id, db=db)

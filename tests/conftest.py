@@ -110,6 +110,19 @@ def take_and_diagnose(client, headers, app_id):
     return r
 
 
+def check(client, headers, app_id, passed=True, comment=None):
+    body = {"passed": passed} if comment is None else {"passed": passed, "comment": comment}
+    return client.post(f"/engineer/{app_id}/check", json=body, headers=headers)
+
+
+def repair_and_check(client, staff, app_id):
+    """мастер закрывает ремонт, инженер заявки проверяет: устройство готово к выдаче"""
+    assert client.post(f"/repairer/{app_id}/repair", headers=staff["repairer"]).status_code == 200
+    r = check(client, staff["engineer"], app_id)
+    assert r.status_code == 200, r.text
+    return r
+
+
 @pytest.fixture
 def application_in_repair(client, staff, new_application):
     """заявка после диагностики, взятая первым мастером"""
