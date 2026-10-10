@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, Integer, Numeric, ForeignKey
+from sqlalchemy import String, Text, Integer, Numeric, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.databases.database import Base
 
@@ -58,6 +58,10 @@ class StockPart(Base):
     price: Mapped[float] = mapped_column(Numeric(10,2),nullable=False)
 
     quantity: Mapped[int] = mapped_column(Integer,default=0,nullable=False)
+
+
+#название на складе уникально без учета регистра: "Шлейф" и "шлейф" - одна запчасть
+Index("ix_stock_parts_name_lower", func.lower(StockPart.name), unique=True)
 
 
 #запчасти, списанные со склада на заявку

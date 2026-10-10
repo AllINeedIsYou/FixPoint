@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.api.services.services import get_all_applications
 from src.api.services.services_stock import get_stock
-from src.shemas import StockPartShema
+from src.shemas import StockPartShema, CleanStr
 from src.auth.auth import require_role
 from src.databases.database import get_db
 from src.shemas import ApplicationShema, PartCreateShema
@@ -22,7 +22,7 @@ def get_application_repairer(db: Session = Depends(get_db)):
 
 #Просмотр склада, чтобы знать какие запчасти можно взять
 @router_repair.get("/stock", response_model=list[StockPartShema], dependencies=[Depends(require_role("repairer"))], summary="Склад запчастей")
-def get_stock_repairer(search: str | None = None, db: Session = Depends(get_db)):
+def get_stock_repairer(search: CleanStr | None = None, db: Session = Depends(get_db)):
     return get_stock(db=db, search=search)
 
 

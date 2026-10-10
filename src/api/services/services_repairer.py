@@ -8,9 +8,11 @@ from src.shemas import PartCreateShema
 
 
 #заявка, с которой мастер может работать прямо сейчас:
-#диагностика пройдена, ремонт не завершен, заявку взял именно этот мастер
+#диагностика пройдена, ремонт не завершен, заявку взял именно этот мастер.
+#with_for_update блокирует заявку до конца запроса, чтобы параллельные запросы по ней шли по очереди
+#(иначе одна запчасть удалялась дважды и дважды возвращалась на склад)
 def get_application_in_repair(application_id: int, employee_id: int, db: Session, action: str) -> Application:
-    application = db.query(Application).filter(Application.id == application_id).first()
+    application = db.query(Application).filter(Application.id == application_id).with_for_update().first()
     if not application:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -118,8 +120,9 @@ def delete_part(application_id: int, part_id: int, employee_id: int, db: Session
 
 
 #функция назначения мастера на заявку
+#with_for_update блокирует строку заявки, чтобы два мастера не взяли ее одновременно
 def take_repairer_application(application_id: int, employee_id: int, db: Session):
-    application = db.query(Application).filter(Application.id == application_id).first()
+    application = db.query(Application).filter(Application.id == application_id).with_for_update().first()
     if not application:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

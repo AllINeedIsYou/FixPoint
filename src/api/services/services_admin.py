@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
 from src.api.services.services import generate_access_code, hash_code
@@ -34,7 +35,15 @@ def create_unique_access_code(db: Session, role: str, FIO: str) -> tuple[AccessC
 #мы сохраняем в бд хэш, не сам код, но код отдаем в return,
 # чтобы вывести его в эндпоинте ниже, чтобы пользователь мох сохранить его и передать работнику
     db.add(db_access_code)
-    db.commit()
+    #параллельный запрос мог успеть сохранить работника с таким же ФИО между проверкой и сохранением
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f'Работник с таким ФИО уже есть в базе данных'
+        )
     db.refresh(db_access_code)
 
     return db_access_code,new_code

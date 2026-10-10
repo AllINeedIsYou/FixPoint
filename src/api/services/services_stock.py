@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
 
@@ -27,7 +28,15 @@ def create_stock_part(data: StockPartCreateShema, db: Session):
 
     stock_part = StockPart(name=name, price=data.price, quantity=data.quantity)
     db.add(stock_part)
-    db.commit()
+    #параллельный запрос мог успеть добавить такую же запчасть между проверкой и сохранением
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Запчасть '{name}' уже есть на складе, измените ее цену или количество"
+        )
     db.refresh(stock_part)
     return stock_part
 

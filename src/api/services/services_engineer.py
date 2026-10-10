@@ -4,8 +4,9 @@ from starlette import status
 from src.models import Application
 
 #функция для диагностки(status_info), отметить диагностику может только мастер диагностики, который взял заявку
+#with_for_update блокирует заявку, чтобы повторный параллельный запрос не отметил диагностику второй раз
 def perform_diagnostics(aplication_id:int, employee_id: int, diagnostic_info: str, db:Session):
-    application=db.query(Application).filter(Application.id==aplication_id).first()
+    application=db.query(Application).filter(Application.id==aplication_id).with_for_update().first()
     if not application:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -40,8 +41,9 @@ def perform_diagnostics(aplication_id:int, employee_id: int, diagnostic_info: st
     return application
 
 #функция назначения мастера(диагносткии) на заявку
+#with_for_update блокирует строку заявки, чтобы два инженера не забронировали ее одновременно
 def take_engineer_application(application_id: int, employee_id: int, db: Session):
-    application = db.query(Application).filter(Application.id == application_id).first()
+    application = db.query(Application).filter(Application.id == application_id).with_for_update().first()
     if not application:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
