@@ -1,31 +1,25 @@
 export const users = [
   {
-    login: 'client',
-    password: '1234',
-    role: 'client',
+    login: 'operator',
+    password: 'DW785YE6RVJA',
+    role: 'operator',
     name: 'Иван Петров',
   },
   {
-    login: 'operator',
-    password: '1234',
-    role: 'operator',
-    name: 'Юлий Цезарь',
-  },
-  {
     login: 'engineer',
-    password: '1234',
+    password: 'D0KND8UDUVTL',
     role: 'engineer',
-    name: 'Ахмед крутой',
+    name: 'Ахмед Крутой',
   },
   {
     login: 'repairer',
-    password: '1234',
+    password: '0A0NW3HHKK6J',
     role: 'repairer',
     name: 'Билл Гейтс',
   },
   {
     login: 'admin',
-    password: '1234',
+    password: 'A0ANW3KKHH6J',
     role: 'admin',
     name: 'Администратор Юлия',
   },
