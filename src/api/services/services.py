@@ -25,3 +25,8 @@ def generate_access_code(length: int = 12):
         secrets.choice(alphabet)
         for _ in range(length)
     )
+
+# ГЕНЕРАЦИЯ КОДА ЗАЯВКИ
+def generate_application_code() -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for i in range(8))

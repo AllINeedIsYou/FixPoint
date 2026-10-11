@@ -29,6 +29,7 @@ def add_application(
         "status": "application added",
         "id": new_application.id,
         "client_id": new_application.client_id,
+        "code": new_application.code
     }
 
 @router_operator.get("/get_applications",response_model=list[ApplicationShema],summary="Список заявок", dependencies=[Depends(require_role("operator"))])

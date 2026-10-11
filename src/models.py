@@ -65,6 +65,8 @@ class Application(Base):
 
     diagnostic_result:Mapped[str|None]=mapped_column(default=None)
 
+    code: Mapped[str] = mapped_column(String(8), unique=True, nullable=False)
+
     #комментарий инженера по последней проверке ремонта
     check_result: Mapped[str | None] = mapped_column(Text, default=None)
 
