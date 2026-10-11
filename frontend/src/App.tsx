@@ -10,13 +10,12 @@ function App() {
 
   const [showLogin, setShowLogin] = useState(false)
 
-  const [login, setLogin] = useState('')
-  const [password, setPassword] = useState('')
+  //КОД ДОСТУПА КОТОРЫЙ ВВОДИТ СОТРУДНИК
+  const [accessCode, setAccessCode] = useState('')
+
   const [error, setError] = useState('')
 
   const [currentUser, setCurrentUser] = useState<{
-    login: string
-    password: string
     role: string
     name: string
   } | null>(null)
@@ -39,20 +38,31 @@ function App() {
   // =========================
 
   const handleLogin = () => {
+    //тута пока только проверяю формат заполения 
+    //реальную проверку потом к бекенду подкл надо
+    //if (!accessCode.trim()) {
+      //setError('Введите код доступа сотрудника')
+      //return
     const user = users.find(
       (user) =>
-        user.login === login &&
-        user.password === password
+        user.password === accessCode.trim()
     )
 
     if (user) {
-      setCurrentUser(user)
+      setCurrentUser({
+        role: user.role,
+        name: user.name,
+      })
+
       setError('')
+      setAccessCode('')
       setActivePage('home')
       setSelectedApplication(null)
+      setShowLogin(false)
     } else {
-      setError('Неверный логин или пароль')
+      setError('Неверный код доступа')
     }
+    //setError('Проверка кода пока не подключена к серверу')
   }
 
 
@@ -78,8 +88,7 @@ function App() {
     setShowLogin(true) //после выхода показываем форму входа сотруудников
     setActivePage('home')
     setSelectedApplication(null)
-    setLogin('')
-    setPassword('')
+    setAccessCode('')
     setError('')
   }
 
@@ -849,43 +858,25 @@ function App() {
           </h1>
 
           <p className="welcome-description">
-            Войдите эбэбэбэ чето написать или не надо хз
+            Введите индивидуальный код доступа, выданный администратором.
           </p>
 
 
+          
           <div className="form">
-
             <label>
-              Логин
-
-              <input
-                type="text"
-                placeholder="Введите логин"
-                value={login}
-                onChange={(event) =>
-                  setLogin(
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-
-            <label>
-              Пароль
+              Код доступа сотрудника
 
               <input
                 type="password"
-                placeholder="Введите пароль"
-                value={password}
+                placeholder="Введите код доступа"
+                value={accessCode}
                 onChange={(event) =>
-                  setPassword(
-                    event.target.value
-                  )
+                  setAccessCode(event.target.value)
                 }
+                autoComplete="current-password"
               />
             </label>
-
 
             <button
               className="login-button"
@@ -894,24 +885,22 @@ function App() {
               Войти
             </button>
 
-
             {error && (
               <p className="login-error">
                 {error}
               </p>
             )}
 
-
             <button
               className="back-button"
               onClick={() => {
                 setShowLogin(false)
+                setAccessCode('')
                 setError('')
               }}
             >
-              ← На главную 
+              ← На главную
             </button>
-
           </div>
 
         </div>
