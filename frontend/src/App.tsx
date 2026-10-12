@@ -7,6 +7,8 @@ import {
 } from './mockData'
 import './App.css'
 import HomePage from './HomePage'
+//боковая менюшка
+import Sidebar from './Sidebar'
 
 function App() {
   // =========================
@@ -40,8 +42,11 @@ function App() {
   //эт локальный список пока без бд. чтобы новые заявки добавлялись в
   //  интерфейс, а не терялись из-за использования исходного массива.
   const [applicationList, setApplicationList] = useState<
-    { id: number; client: string; device: String; status: string }[]
+    { id: number; client: string; device: string; status: string }[]
   >(applications)
+
+  //список сотрудников пока в памяти приложения
+  const [employeeList, setEmployeeList] = useState(users)
   
   //локальные копии моковых данных которые можно изменять
   const [clientList, setClientList] = useState(clients)
@@ -111,14 +116,10 @@ function App() {
 
 
   const handleLogin = () => {
-    //тута пока только проверяю формат заполения 
-    //реальную проверку потом к бекенду подкл надо
-    //if (!accessCode.trim()) {
-      //setError('Введите код доступа сотрудника')
-      //return
-    const user = users.find(
+    const user = employeeList.find(
       (user) =>
-        user.password === accessCode.trim()
+        user.password === accessCode.trim() &&
+        user.active === true
     )
 
     if (user) {
@@ -193,57 +194,17 @@ function App() {
       return (
         <main className="dashboard">
 
-          {/* БОКОВОЕ МЕНЮ */}
-
-          <aside className="sidebar">
-
-            <div className="sidebar-logo">
-              <span>Fix</span>
-              <strong>Point</strong>
-            </div>
-
-            <nav className="sidebar-nav">
-
-              <button
-                className={`nav-item ${
-                  activePage === 'home' ? 'active' : ''
-                }`}
-                onClick={() => {
-                  setActivePage('home')
-                  setSelectedApplication(null)
-                }}
-              >
-                Главная
-              </button>
-
-              <button
-                className={`nav-item ${
-                  activePage === 'applications'
-                    ? 'active'
-                    : ''
-                }`}
-                onClick={() => {
-                  setActivePage('applications')
-                  setSelectedApplication(null)
-                }}
-              >
-                Заявки
-              </button>
-
-              <button className="nav-item">
-                Профиль
-              </button>
-
-            </nav>
-
-            <button
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              Выйти
-            </button>
-
-          </aside>
+          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
 
 
           {/* ОСНОВНАЯ ЧАСТЬ */}
@@ -493,36 +454,17 @@ function App() {
     if (activePage === 'clients' && currentUser.role === 'operator') {
       return (
         <main className="dashboard">
-          <aside className="sidebar">
-            <div className="sidebar-logo">
-              <span>Fix</span>
-              <strong>Point</strong>
-            </div>
-
-            <nav className="sidebar-nav">
-              <button
-                className="nav-item"
-                onClick={() => setActivePage('home')}
-              >
-                Главная
-              </button>
-
-              <button
-                className="nav-item"
-                onClick={() => setActivePage('applications')}
-              >
-                Все заявки
-              </button>
-
-              <button className="nav-item active">
-                Клиенты
-              </button>
-            </nav>
-
-            <button className="logout-button" onClick={handleLogout}>
-              Выйти
-            </button>
-          </aside>
+          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
 
           <section className="dashboard-content">
             <header className="dashboard-header">
@@ -533,7 +475,7 @@ function App() {
             </header>
 
             <section className="applications-section">
-              <h2>Список клиенттов</h2>
+              <h2>Список клиентов</h2>
 
               <div className="applications-list">
                 {clientList.map((client) => {
@@ -616,36 +558,16 @@ function App() {
 
       return (
         <main className="dashboard">
-          <aside className="sidebar">
-            <div className="sidebar-logo">
-              <span>Fix</span>
-              <strong>Point</strong>
-            </div>
-
-            <nav className="sidebar-nav">
-              <button
-                className="nav-item"
-                onClick={() => setActivePage('home')}
-              >
-                Главная
-              </button>
-
-              <button
-                className="nav-item"
-                onClick={() => setActivePage('applications')}
-              >
-                Мои заявки
-              </button>
-
-              <button className="nav-item active">
-                Склад запчастей
-              </button>
-            </nav>
-
-            <button className="logout-button" onClick={handleLogout}>
-              Выйти
-            </button>
-          </aside>
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
 
           <section className="dashboard-content">
             <header className="dashboard-header">
@@ -683,7 +605,7 @@ function App() {
               />
 
               {currentUser.role === 'admin' && (
-                <div className="application-card">
+                <div className="application-card stock-form-card">
                   <div className="application-info">
                     <h3>Добавить запчасть</h3>
 
@@ -755,55 +677,18 @@ function App() {
 
       return (
         <main className="dashboard">
-
-          {/* БОКОВОЕ МЕНЮ */}
-
-          <aside className="sidebar">
-
-            <div className="sidebar-logo">
-              <span>Fix</span>
-              <strong>Point</strong>
-            </div>
-
-            <nav className="sidebar-nav">
-
-              <button
-                className="nav-item"
-                onClick={() => {
-                  setActivePage('home')
-                  setSelectedApplication(null)
-                }}
-              >
-                Главная
-              </button>
-
-
-              <button
-                className="nav-item active"
-                onClick={() => {
-                  setActivePage('applications')
-                  setSelectedApplication(null)
-                }}
-              >
-                Заявки
-              </button>
-
-
-              <button className="nav-item">
-                Профиль
-              </button>
-
-            </nav>
-
-
-            <button
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              Выйти
-            </button>
-
-          </aside>
+          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+          
 
 
           {/* ОСНОВНАЯ ЧАСТЬ */}
@@ -977,125 +862,17 @@ function App() {
 
     return (
       <main className="dashboard">
-
-        {/* БОКОВОЕ МЕНЮ */}
-
-        <aside className="sidebar">
-
-          <div className="sidebar-logo">
-            <span>Fix</span>
-            <strong>Point</strong>
-          </div>
-
-
-          <nav className="sidebar-nav">
-            <button
-              className={`nav-item ${activePage === 'home' ? 'active' : ''}`}
-              onClick={() => {
-                setActivePage('home')
-                setSelectedApplication(null)
-              }}
-            >
-              Главная
-            </button>
-
-            {currentUser.role === 'engineer' && (
-              <>
-                <button
-                  className={`nav-item ${activePage === 'applications' ? 'active' : ''}`}
-                  onClick={() => {
-                    setActivePage('applications')
-                    setSelectedApplication(null)
-                  }}
-                >
-                  Мои заявки
-                </button>
-              </>
-            )}
-
-            {currentUser.role === 'operator' && (
-              <>
-                <button
-                  className={`nav-item ${activePage === 'applications' ? 'active' : ''}`}
-                  onClick={() => {
-                    setActivePage('applications')
-                    setSelectedApplication(null)
-                  }}
-                >
-                  Все заявки
-                </button>
-
-                <button
-                  className={`nav-item ${activePage === 'clients' ? 'active' : ''}`}
-                  onClick={() => {
-                    setActivePage('clients')
-                    setSelectedApplication(null)
-                  }}
-                >
-                  Клиенты
-                </button>
-              </>
-            )}
-
-            {currentUser.role === 'admin' && (
-              <>
-                <button
-                  className={`nav-item ${activePage === 'applications' ? 'active' : ''}`}
-                  onClick={() => {
-                    setActivePage('applications')
-                    setSelectedApplication(null)
-                  }}
-                >
-                  Все заявки
-                </button>
-
-                <button
-                  className={`nav-item ${activePage === 'employees' ? 'active' : ''}`}
-                  onClick={() => setActivePage('employees')}
-                >
-                  Сотрудники
-                </button>
-
-                <button
-                  className={`nav-item ${activePage === 'stock' ? 'active' : ''}`}
-                  onClick={() => setActivePage('stock')}
-                >
-                  Склад
-                </button>
-              </>
-            )}
-
-            {currentUser.role === 'repairer' && (
-              <>
-                <button
-                  className={`nav-item ${activePage === 'applications' ? 'active' : ''}`}
-                  onClick={() => {
-                    setActivePage('applications')
-                    setSelectedApplication(null)
-                  }}
-                >
-                  Мои заявки
-                </button>
-
-                <button
-                  className={`nav-item ${activePage === 'stock' ? 'active' : ''}`}
-                  onClick={() => setActivePage('stock')}
-                >
-                  Склад запчастей
-                </button>
-              </>
-            )}
-          </nav>
-
-
-          <button
-            className="logout-button"
-            onClick={handleLogout}
-          >
-            Выйти
-          </button>
-
-        </aside>
+        {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+        <Sidebar
+          role={currentUser.role}
+          activePage={activePage}
+          onNavigate={(page) => {
+            setActivePage(page)
+            setSelectedApplication(null)
+            setError('')
+          }}
+          onLogout={handleLogout}
+        />
 
 
         {/* ОСНОВНАЯ ЧАСТЬ */}

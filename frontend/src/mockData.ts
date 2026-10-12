@@ -4,24 +4,28 @@ export const users = [
     password: 'DW785YE6RVJA',
     role: 'operator',
     name: 'Иван Петров',
+    active: true,
   },
   {
     login: 'engineer',
     password: 'D0KND8UDUVTL',
     role: 'engineer',
     name: 'Ахмед Крутой',
+    active: true,
   },
   {
     login: 'repairer',
     password: '0A0NW3HHKK6J',
     role: 'repairer',
     name: 'Билл Гейтс',
+    active: true,
   },
   {
     login: 'admin',
     password: 'A0ANW3KKHH6J',
     role: 'admin',
     name: 'Администратор Юлия',
+    active: true,
   },
 ]
 
