@@ -9,6 +9,8 @@ import './App.css'
 import HomePage from './HomePage'
 //боковая менюшка
 import Sidebar from './Sidebar'
+// импорт страницы сотрудников для админа
+import EmployeesPage from './pages/EmployeesPage'
 
 function App() {
   // =========================
@@ -851,6 +853,59 @@ function App() {
 
           </section>
 
+        </main>
+      )
+    }
+
+    
+    // =========================
+    // СТРАНИЦА СОТРУДНИКОВ
+    // =========================
+
+    if (activePage === 'employees' && currentUser.role === 'admin') {
+      return (
+        <main className="dashboard">
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+
+          <EmployeesPage
+            employees={employeeList}
+            onToggleActive={(login) => {
+              setEmployeeList((prev) =>
+                prev.map((employee) =>
+                  employee.login === login
+                    ? { ...employee, active: !employee.active }
+                    : employee
+                )
+              )
+            }}
+            onGenerateCode={(login) => {
+              const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+              let newCode = ''
+
+              for (let i = 0; i < 12; i++) {
+                newCode += characters.charAt(
+                  Math.floor(Math.random() * characters.length)
+                )
+              }
+
+              setEmployeeList((prev) =>
+                prev.map((employee) =>
+                  employee.login === login
+                    ? { ...employee, password: newCode }
+                    : employee
+                )
+              )
+            }}
+          />
         </main>
       )
     }

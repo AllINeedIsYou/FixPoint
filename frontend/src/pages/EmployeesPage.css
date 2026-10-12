@@ -1,0 +1,265 @@
+
+.employees-page {
+  min-width: 0;
+  color: #f1f5f9;
+}
+
+/* Описание страницы */
+.employees-description {
+  color: #cbd5e1;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* Сводные карточки */
+.employees-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.employee-summary-card {
+  padding: 22px;
+  border: 1px solid #3b5274;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #243650, #1a2940);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 5px 18px rgb(0 0 0 / 16%);
+}
+
+.employee-summary-card span {
+  color: #c4d2e5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.employee-summary-card strong {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+/* Сетка сотрудников */
+.employees-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.employee-card {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #354a67;
+  border-radius: 14px;
+  background: #202e43;
+  box-shadow: 0 5px 18px rgb(0 0 0 / 14%);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.employee-card:hover {
+  border-color: #5489d8;
+  transform: translateY(-2px);
+}
+
+/* Верх карточки */
+.employee-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.employee-avatar {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid #5285ce;
+  border-radius: 12px;
+  background: #294b78;
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.employee-main-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.employee-main-info strong {
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.employee-main-info span {
+  color: #c1cee0;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Статусы */
+.employee-status {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.employee-status.is-active {
+  color: #86efac;
+  background: #123d30;
+  border-color: #267653;
+}
+
+.employee-status.is-blocked {
+  color: #fca5a5;
+  background: #4b2029;
+  border-color: #963d4a;
+}
+
+/* Код доступа */
+.employee-access {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 22px 0;
+}
+
+.employee-access span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.employee-access code {
+  display: block;
+  padding: 12px;
+  border: 1px solid #3d5575;
+  border-radius: 8px;
+  background: #121d2d;
+  color: #93c5fd;
+  font-family: Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* Кнопки */
+.employee-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.employee-actions button {
+  flex: 1;
+  min-width: 130px;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.employee-actions button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+/* Генерация кода */
+.employee-actions .secondary-button {
+  color: #dbeafe;
+  background: #29476d;
+  border-color: #456b9e;
+}
+
+.employee-actions .secondary-button:hover {
+  background: #355b8a;
+  border-color: #6ba0eb;
+}
+
+/* Блокировка */
+.employee-block-button {
+  color: #fecaca;
+  background: #56232c;
+  border-color: #873d49 !important;
+}
+
+.employee-actions .employee-block-button:hover {
+  background: #71303b;
+}
+
+/* Активация */
+.employee-activate-button {
+  color: #bbf7d0;
+  background: #164b3b;
+  border-color: #28795b !important;
+}
+
+.employee-actions .employee-activate-button:hover {
+  background: #20664e;
+}
+
+/* Если сотрудников пока нет */
+.employee-empty {
+  padding: 28px;
+  border: 1px dashed #526782;
+  border-radius: 12px;
+  background: #202e43;
+  color: #dbe5f2;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* Адаптация под экран поменьше */
+@media (max-width: 800px) {
+  .employees-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  .employees-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-card {
+    padding: 16px;
+  }
+
+  .employee-card-top {
+    flex-wrap: wrap;
+  }
+
+  .employee-actions {
+    flex-direction: column;
+  }
+
+  .employee-actions button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employee-card,
+  .employee-actions button {
+    transition: none;
+  }
+}
