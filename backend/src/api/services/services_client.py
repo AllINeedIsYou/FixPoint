@@ -1,15 +1,13 @@
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from src.databases.database import get_db
+from fastapi import HTTPException, status
 from src.models import Application
 from src.api.roles.operator import phone_operator
 
 #функция для просмотора статуса заявки по айди
-def status_client(application_id: int, db: Session = Depends(get_db)):
+def status_client(application_id, db, client_id):
 
     application = (
         db.query(Application)
-        .filter(Application.id == application_id)
+        .filter(Application.id == application_id, Application.client_id == client_id)
         .first()
     )
 

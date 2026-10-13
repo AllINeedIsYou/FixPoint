@@ -1,11 +1,19 @@
 import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
+from sqlite3 import SQLITE_CONSTRAINT_UNIQUE
+
 import jwt
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Body, Cookie, Depends, Form, HTTPException, Response, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+from psycopg2.errors import UniqueViolation
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from src.databases.database import get_db, settings
-from src.models import AccessCode
-from src.shemas import TokenResponseSchema
+from src.models import AccessCode,Client,ClientSessions
+from src.shemas import TokenResponseSchema,ClientCreateShema,ClientLoginSchema,ClientResponseShema
 from fastapi.security import OAuth2PasswordBearer
 
 # Секретный ключ JWT
@@ -22,7 +30,7 @@ security = OAuth2PasswordBearer(
 
 router_auth = APIRouter(prefix="/auth", tags=["Авторизация"])
 
-#функция кеширования
+#функция хеширования
 def hash_code(code: str):
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
@@ -115,3 +123,132 @@ def require_role(required_role: str):
             )
 
     return dependency
+
+CLIENT_SESSION_COOKIE = "client_session"
+
+
+def validate_client_data(schema, data):
+    try:
+        return schema.model_validate(data)
+    except ValidationError as error:
+        errors = error.errors(include_input=False, include_url=False)
+        for item in errors:
+            item["loc"] = ("body", *item["loc"])
+        raise RequestValidationError(errors) from error
+
+
+def register_client(db, client_data):
+    now=datetime.now(timezone.utc)
+
+    dump_client=client_data.model_dump(exclude={"password"})
+    dump_client["created_at"]=now
+
+    new_client=Client(**dump_client,password_hash=hash_code(client_data.password))
+
+    try:
+        db.add(new_client)
+        db.commit()
+
+    except IntegrityError as error:
+        db.rollback()
+
+        if isinstance(error.orig, UniqueViolation) or getattr(error.orig, "sqlite_errorcode", None) == SQLITE_CONSTRAINT_UNIQUE:
+            raise HTTPException(
+                status_code=409,
+                detail="Логин или номер телефона уже заняты"
+            )
+
+        raise
+
+    db.refresh(new_client)
+    return new_client
+
+
+def authenticate_client(db, client_data):
+    client = db.query(Client).filter(Client.login == client_data.username).first()
+    if client is None or client.password_hash is None:
+        raise HTTPException(status_code=401, detail="Неверный логин или пароль")
+    if not secrets.compare_digest(hash_code(client_data.password), client.password_hash):
+        raise HTTPException(status_code=401, detail="Неверный логин или пароль")
+    return client
+
+
+def create_client_session(db, client_id):
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=7)
+    entry = ClientSessions(
+        client_id=client_id,
+        token_hash=hash_code(token),
+        created_at=now,
+        expires_at=expires_at,
+    )
+    try:
+        db.add(entry)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    return token, expires_at
+
+
+def get_current_client(token=Cookie(default=None, alias=CLIENT_SESSION_COOKIE), db=Depends(get_db)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Войдите в аккаунт клиента")
+    entry = db.query(ClientSessions).filter(
+        ClientSessions.token_hash == hash_code(token),
+        ClientSessions.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if entry is None:
+        raise HTTPException(status_code=401, detail="Сессия недействительна или истекла")
+    client = db.query(Client).filter(Client.id == entry.client_id).first()
+    if client is None:
+        raise HTTPException(status_code=401, detail="Клиент не найден")
+    return client
+
+
+@router_auth.post("/client/register", response_model=ClientResponseShema, status_code=201, summary="Регистрация клиента")
+def register_client_endpoint(
+    client_data=Body(..., json_schema_extra=ClientCreateShema.model_json_schema()),
+    db=Depends(get_db),
+):
+    data = validate_client_data(ClientCreateShema, client_data)
+    return register_client(db=db, client_data=data)
+
+
+@router_auth.post("/client/login", response_model=ClientResponseShema, summary="Вход клиента")
+def login_client_endpoint(
+    client_data=Body(..., json_schema_extra=ClientLoginSchema.model_json_schema()),
+    db=Depends(get_db),
+):
+    data = validate_client_data(ClientLoginSchema, client_data)
+    client = authenticate_client(db=db, client_data=data)
+    token, expires_at = create_client_session(db=db, client_id=client.id)
+    response = JSONResponse(content=ClientResponseShema.model_validate(client).model_dump(mode="json"))
+    response.set_cookie(
+        key=CLIENT_SESSION_COOKIE,
+        value=token,
+        expires=expires_at,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/",
+    )
+    return response
+
+
+@router_auth.get("/client/me", response_model=ClientResponseShema, summary="Текущий клиент")
+def current_client_endpoint(client=Depends(get_current_client)):
+    return client
+
+
+@router_auth.post("/client/logout", status_code=204, summary="Выход клиента")
+def logout_client_endpoint(token=Cookie(default=None, alias=CLIENT_SESSION_COOKIE), db=Depends(get_db)):
+    if token:
+        entry = db.query(ClientSessions).filter(ClientSessions.token_hash == hash_code(token)).first()
+        if entry is not None:
+            db.delete(entry)
+            db.commit()
+    response = Response(status_code=204)
+    response.delete_cookie(key=CLIENT_SESSION_COOKIE, path="/")
+    return response

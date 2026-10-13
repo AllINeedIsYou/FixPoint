@@ -1,5 +1,6 @@
+from datetime import datetime, timezone
 from enum import IntEnum
-from sqlalchemy import String, Text, Integer, Numeric, ForeignKey, Index, func
+from sqlalchemy import String, Text, Integer, Numeric, ForeignKey, Index, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.databases.database import Base
 
@@ -42,10 +43,28 @@ class Client(Base):
 
     applications: Mapped[list["Application"]] = relationship(back_populates="client", order_by="Application.id")
 
+    login:Mapped[str | None] = mapped_column(String(40),nullable=True,unique=True)
+
+    password_hash:Mapped[str | None] = mapped_column(String(255),nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
     @property
-    def application_ids(self) -> list[int]:
+    def application_ids(self):
         return [application.id for application in self.applications]
 
+class ClientSessions(Base):
+    __tablename__ = 'ClientSessions'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    client_id: Mapped[int] = mapped_column(ForeignKey(Client.id), nullable=False)
+
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 #таблица с заявками
 class Application(Base):

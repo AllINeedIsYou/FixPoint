@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Annotated
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
@@ -152,3 +153,29 @@ class TokenResponseSchema(BaseModel):
     token_type: str = "bearer"
     role: str
 
+class ClientLoginSchema(BaseModel):
+    username: str = Field(min_length=1, max_length=40)
+    password: CleanStr = Field(min_length=1, max_length=128)
+
+
+class ClientCreateShema(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=False)
+    FIO: CleanStr = Field(min_length=1, max_length=255)
+    number: PhoneNumber
+    email: EmailStr
+    login: CleanStr = Field(min_length=3, max_length=40, pattern=r"^[a-zA-Z0-9_.-]+$")
+    password: CleanStr = Field(min_length=8, max_length=128)
+
+    @field_validator("FIO", "login", mode="before")
+    @classmethod
+    def strip_client_fields(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+class ClientResponseShema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    FIO: str
+    number: PhoneNumber
+    email: EmailStr
+    login: str
+    created_at: datetime
