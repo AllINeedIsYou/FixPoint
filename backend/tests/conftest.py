@@ -90,12 +90,29 @@ def new_application(client, staff):
     def make():
         r = client.post(
             "/operator/add_application",
-            json={"FIO": "Иван", "number": "+79161234567", "email": "ivan@example.com", "info": "не включается"},
+            json={"FIO": "Иван", "number": "+79161234567", "email": "ivan@example.com", "info": "не включается", "device": "Телефон", "device_model": "Модель"},
             headers=staff["operator"],
         )
         assert r.status_code == 200, r.text
         return r.json()["id"]
     return make
+
+
+@pytest.fixture
+def login_application_client(client, db_session_factory):
+    from src.auth.auth import hash_code
+    from src.models import Application
+
+    def login(application_id):
+        with db_session_factory() as db:
+            profile = db.get(Application, application_id).client
+            profile.login = f"client{profile.id}"
+            profile.password_hash = hash_code("test-password")
+            username = profile.login
+            db.commit()
+        response = client.post("/auth/client/login", json={"username": username, "password": "test-password"})
+        assert response.status_code == 200, response.text
+    return login
 
 
 def diagnose(client, headers, app_id, info="сгорел блок питания"):

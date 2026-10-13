@@ -6,7 +6,7 @@ def add(client, staff):
     def make(FIO="Иван Петров", number="+79161234567", email="ivan@example.com", info="не включается"):
         return client.post(
             "/operator/add_application",
-            json={"FIO": FIO, "number": number, "email": email, "info": info},
+            json={"FIO": FIO, "number": number, "email": email, "info": info, "device": "Телефон", "device_model": "Модель"},
             headers=staff["operator"],
         )
     return make
@@ -76,8 +76,9 @@ def test_deleting_application_keeps_client(client, staff, add):
     assert add().json()["client_id"] == c["id"]
 
 
-def test_client_status_uses_client_name(client, add):
+def test_client_status_uses_client_name(client, add, login_application_client):
     app_id = add().json()["id"]
+    login_application_client(app_id)
     assert "Иван Петров" in client.get("/client/status", params={"application_id": app_id}).json()
 
 

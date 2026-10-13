@@ -21,6 +21,7 @@ def get_application_repairer(db: Session = Depends(get_db)):
 
 
 #Поиск по складу запчастей
+@router_repair.get("/stock", response_model=list[StockPartShema], dependencies=[Depends(require_role("repairer"))], summary="Склад запчастей")
 @router_repair.get("/find_stock", response_model=list[StockPartShema], dependencies=[Depends(require_role("repairer"))], summary="Поиск по складу запчастей")
 def get_stock_repairer(search: CleanStr | None = None, db: Session = Depends(get_db)):
     return get_stock(db=db, search=search)

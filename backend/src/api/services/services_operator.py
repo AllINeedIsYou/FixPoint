@@ -28,7 +28,10 @@ def create_application(data: ApplicationCreateShema, db: Session, retry: bool = 
                    f"Проверьте ФИО и email или укажите другой телефон"
         )
 
-    application = Application(client=client, info=data.info, code=generate_application_code())
+    application = Application(
+        client=client, info=data.info, device=data.device, device_model=data.device_model,
+        code=generate_application_code(),
+    )
     db.add(application)
     try:
         db.commit()

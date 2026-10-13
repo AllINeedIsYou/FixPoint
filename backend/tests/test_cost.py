@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import get_application
+from .conftest import get_application
 from src.models import WORK_COST, Application, Client, Part
 
 

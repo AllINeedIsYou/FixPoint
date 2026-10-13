@@ -10,13 +10,13 @@ Backend MVP-система для управления заявками на р�
 
 # Клиент
 
-* Проверка статуса заявки по ID.
+* Проверка статуса своей заявки после входа: по ID (`application_id`) или коду (`application_code`).
 * Получение информации о текущем этапе ремонта.
 * Получение контактов оператора.
 
 ### Оператор
 
-* Создание новых заявок. Клиент определяется по телефону: повторное обращение попадает к тому же клиенту, а если телефон уже есть с другими ФИО или email, вернётся 400 с данными существующего клиента.
+* Создание новых заявок с обязательными полями `device` и `device_model`. Клиент определяется по телефону: повторное обращение попадает к тому же клиенту, а если телефон уже есть с другими ФИО или email, вернётся 400 с данными существующего клиента.
 * Просмотр списка заявок.
 * Список клиентов с поиском по ФИО или цифрам телефона (`/operator/clients?search=`) и история обращений клиента (`/operator/clients/{id}/applications`).
 * Удаление заявок.
@@ -56,32 +56,22 @@ Backend MVP-система для управления заявками на р�
 
 ```
 .
-├── main.py
-├── database.db
-├── .env
-├── .env.example
-└── src
-    ├── models.py
-    ├── shemas.py
-    ├── databases
-    │   └── database.py
-    ├── auth
-    │   └── auth.py
-    └── api
-        ├── roles
-        │   ├── admin.py
-        │   ├── client.py
-        │   ├── engineer.py
-        │   ├── operator.py
-        │   └── repairer.py
-        └── services
-            ├── services.py
-            ├── services_admin.py
-            ├── services_client.py
-            ├── services_engineer.py
-            ├── services_operator.py
-            ├── services_repairer.py
-            └── services_stock.py
+├── backend
+│   ├── main.py
+│   ├── .env
+│   ├── .env.example
+│   ├── requirements.txt
+│   ├── migrations
+│   ├── tests
+│   └── src
+│       ├── models.py
+│       ├── shemas.py
+│       ├── databases
+│       ├── auth
+│       └── api
+│           ├── roles
+│           └── services
+└── frontend
 ```
 
 Архитектура разделена на:
@@ -113,13 +103,13 @@ Backend MVP-система для управления заявками на р�
 ```bash
 git clone <repository-url>
 
-cd project
+cd FixPoint
 ```
 
 Создать виртуальное окружение:
 
 ```bash
-python3 -m venv venv
+python3 -m venv .venv
 ```
 
 Активировать:
@@ -127,13 +117,13 @@ python3 -m venv venv
 ### macOS / Linux
 
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 ### Windows
 
 ```bash
-venv\Scripts\activate
+.venv\Scripts\activate
 ```
 
 ---
@@ -141,7 +131,7 @@ venv\Scripts\activate
 ## Установка зависимостей
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r backend/requirements.txt
 ```
 
 ---
@@ -151,7 +141,7 @@ pip install -r requirements.txt
 > Alembic пока нет. Новую пустую БД создаёт `POST /services/database_create` (**удаляет все данные**). Существующую БД обновлять без потери данных SQL-миграциями из папки `migrations`, их можно запускать повторно:
 >
 > ```bash
-> psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -1 -f migrations/001_clients_and_check.sql
+> psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -1 -f backend/migrations/001_clients_and_check.sql
 > ```
 
 Строка подключения к БД хранится в `backend/.env` (не коммитится в git) и подхватывается через `pydantic-settings`.
@@ -159,21 +149,36 @@ pip install -r requirements.txt
 Скопировать пример конфига и подставить свои данные:
 
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/database
+SECRET_KEY=replace_with_a_random_secret
 ```
 
 ---
 
 ## ▶️ Запуск проекта
 
-Запуск сервера:
+Запуск из корня проекта после активации окружения:
 
 ```bash
+cd backend
 uvicorn main:app --reload
+```
+
+`uvicorn main:app` ищет `main.py` в текущей папке. В корне проекта и в `apitest`
+этого файла нет; точка входа находится в `backend/main.py`.
+Настройки загружаются из `backend/.env` независимо от текущей папки.
+
+После обновления проекта существующую PostgreSQL-базу нужно обновить миграциями.
+Миграция `002_client_auth.sql` добавляет аккаунты клиентов, а `003_application_codes.sql`
+добавляет коды существующим заявкам без удаления данных:
+
+```bash
+psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -f backend/migrations/002_client_auth.sql
+psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -1 -f backend/migrations/003_application_codes.sql
 ```
 
 После запуска документация API доступна:
@@ -306,7 +311,10 @@ Authorization: Bearer <token>
 
 ## ✅ Тесты
 
+Из корня проекта с активированным окружением:
+
 ```bash
+cd backend
 python -m pytest
 ```
 

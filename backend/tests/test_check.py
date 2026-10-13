@@ -1,4 +1,4 @@
-from conftest import check, get_application, repair_and_check, take_and_diagnose
+from .conftest import check, get_application, repair_and_check, take_and_diagnose
 from src.models import Stage, STATUS_CHECK_FAILED, STATUS_CHECKED, STATUS_DIAGNOSTICS_TAKEN, STATUS_REPAIRED
 
 

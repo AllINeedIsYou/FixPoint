@@ -1,4 +1,4 @@
-from conftest import get_application, stock_quantity, take_and_diagnose
+from .conftest import get_application, stock_quantity, take_and_diagnose
 
 
 def add_part(client, headers, app_id, name, quantity=1):

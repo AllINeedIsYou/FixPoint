@@ -4,6 +4,7 @@ from src.api.services.services import get_all_applications
 from src.api.services.services_operator import (del_elements_aplication_by_id, issue_application,
                                                create_application, get_clients, get_client_applications)
 from src.auth.auth import require_role
+from src.api.services.services_admin import release_application
 from src.shemas import ApplicationCreateShema, ApplicationShema, ClientShema
 from src.databases.database import get_db
 
@@ -57,3 +58,8 @@ def get_clients_endpoint(search: str | None = None, db: Session = Depends(get_db
 @router_operator.get('/clients/{client_id}/applications', response_model=list[ApplicationShema], summary='Заявки клиента', dependencies=[Depends(require_role("operator"))])
 def get_client_applications_endpoint(client_id: int, db: Session = Depends(get_db)):
     return get_client_applications(client_id=client_id, db=db)
+
+
+@router_operator.post('/{application_id}/release', response_model=ApplicationShema, summary='Снять исполнителя с заявки', dependencies=[Depends(require_role("operator"))])
+def release_application_endpoint(application_id: int, db: Session = Depends(get_db)):
+    return release_application(application_id=application_id, db=db)

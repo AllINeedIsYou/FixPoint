@@ -1,9 +1,9 @@
-from conftest import check, diagnose, get_application, repair_and_check, take_and_diagnose
+from .conftest import check, diagnose, get_application, repair_and_check, take_and_diagnose
 from src.models import (Stage, STATUS_CREATED, STATUS_DIAGNOSTICS_TAKEN, STATUS_DIAGNOSED, STATUS_REPAIR_TAKEN,
                         STATUS_REPAIRED, STATUS_CHECKED, STATUS_CHECK_FAILED, STATUS_ISSUED)
 
 
-def test_full_flow(client, staff, new_application):
+def test_full_flow(client, staff, new_application, login_application_client):
     app_id = new_application()
     application = get_application(client, staff["repairer"], app_id)
     assert application["status_info"] == Stage.CREATED and application["status"] == STATUS_CREATED
@@ -29,6 +29,7 @@ def test_full_flow(client, staff, new_application):
 
     r = client.post(f"/operator/{app_id}/issue", headers=staff["operator"])
     assert r.status_code == 200 and r.json()["status_info"] == Stage.ISSUED and r.json()["status"] == STATUS_ISSUED
+    login_application_client(app_id)
     assert STATUS_ISSUED in client.get("/client/status", params={"application_id": app_id}).json()
 
 
