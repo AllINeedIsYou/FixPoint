@@ -1,7 +1,16 @@
 import { useState } from 'react'
-import { users, applications } from './mockData'
+import {
+  users,
+  applications,
+  clients,
+  stockParts
+} from './mockData'
 import './App.css'
 import HomePage from './HomePage'
+//боковая менюшка
+import Sidebar from './Sidebar'
+// импорт страницы сотрудников для админа
+import EmployeesPage from './pages/EmployeesPage'
 
 function App() {
   // =========================
@@ -10,13 +19,12 @@ function App() {
 
   const [showLogin, setShowLogin] = useState(false)
 
-  const [login, setLogin] = useState('')
-  const [password, setPassword] = useState('')
+  //КОД ДОСТУПА КОТОРЫЙ ВВОДИТ СОТРУДНИК
+  const [accessCode, setAccessCode] = useState('')
+
   const [error, setError] = useState('')
 
   const [currentUser, setCurrentUser] = useState<{
-    login: string
-    password: string
     role: string
     name: string
   } | null>(null)
@@ -33,26 +41,104 @@ function App() {
   const [applicationStatuses, setApplicationStatuses] =
     useState<Record<number, string>>({})
 
+  //эт локальный список пока без бд. чтобы новые заявки добавлялись в
+  //  интерфейс, а не терялись из-за использования исходного массива.
+  const [applicationList, setApplicationList] = useState<
+    { id: number; client: string; device: string; status: string }[]
+  >(applications)
+
+  //список сотрудников пока в памяти приложения
+  const [employeeList, setEmployeeList] = useState(users)
+  
+  //локальные копии моковых данных которые можно изменять
+  const [clientList, setClientList] = useState(clients)
+  const [stock, setStock] = useState(stockParts)
+
+  //поля создания заявок оператором
+  const [newApplicationClient, setNewApplicationClient] = useState('')
+  const [newApplicationDevice, setNewApplicationDevice] = useState('')
+
+  //поля управления складом
+  const [stockSearch, setStockSearch] = useState('')
+  const [newPartName, setNewPartName] = useState('')
+  const [newPartQuantity, setNewPartQuantity] = useState('1')
+  const [newPartPrice, setNewPartPrice] = useState('')
+
 
   // =========================
   // ВХОД
   // =========================
 
+  // создание тестовой заявки оператором
+  const handleAddApplication = () => {
+    if (!newApplicationClient.trim() || !newApplicationDevice.trim()) {
+      setError('Заполни имя клиента и устройство')
+      return
+    }
+
+    const nextId =
+      Math.max(0, ...applicationList.map((item) => item.id)) + 1
+
+    const newApplication = {
+      id: nextId,
+      client: newApplicationClient.trim(),
+      device: newApplicationDevice.trim(),
+      status: 'Новая',
+    }
+
+    // добавляем заявку в список
+    setApplicationList((prev) => [newApplication, ...prev])
+
+    // проверка существует ли уже такой клиент
+    const clientExists = clientList.some(
+      (client) =>
+        client.name.toLowerCase() === newApplication.client.toLowerCase()
+    )
+
+    // добавить клиента если нет, но не сохр пока
+    if (!clientExists) {
+      const nextClientId =
+        Math.max(0, ...clientList.map((client) => client.id)) + 1
+
+      setClientList((prev) => [
+        ...prev,
+        {
+          id: nextClientId,
+          name: newApplication.client,
+          phone: 'Не указан',
+        },
+      ])
+    }
+
+    setNewApplicationClient('')
+    setNewApplicationDevice('')
+    setError('')
+    setActivePage('applications')
+  }
+
+
   const handleLogin = () => {
-    const user = users.find(
+    const user = employeeList.find(
       (user) =>
-        user.login === login &&
-        user.password === password
+        user.password === accessCode.trim() &&
+        user.active === true
     )
 
     if (user) {
-      setCurrentUser(user)
+      setCurrentUser({
+        role: user.role,
+        name: user.name,
+      })
+
       setError('')
+      setAccessCode('')
       setActivePage('home')
       setSelectedApplication(null)
+      setShowLogin(false)
     } else {
-      setError('Неверный логин или пароль')
+      setError('Неверный код доступа')
     }
+    //setError('Проверка кода пока не подключена к серверу')
   }
 
 
@@ -78,8 +164,7 @@ function App() {
     setShowLogin(true) //после выхода показываем форму входа сотруудников
     setActivePage('home')
     setSelectedApplication(null)
-    setLogin('')
-    setPassword('')
+    setAccessCode('')
     setError('')
   }
 
@@ -95,7 +180,7 @@ function App() {
     // =========================
 
     if (selectedApplication !== null) {
-      const application = applications.find(
+      const application = applicationList.find(
         (item) => item.id === selectedApplication
       )
 
@@ -111,57 +196,17 @@ function App() {
       return (
         <main className="dashboard">
 
-          {/* БОКОВОЕ МЕНЮ */}
-
-          <aside className="sidebar">
-
-            <div className="sidebar-logo">
-              <span>Fix</span>
-              <strong>Point</strong>
-            </div>
-
-            <nav className="sidebar-nav">
-
-              <button
-                className={`nav-item ${
-                  activePage === 'home' ? 'active' : ''
-                }`}
-                onClick={() => {
-                  setActivePage('home')
-                  setSelectedApplication(null)
-                }}
-              >
-                Главная
-              </button>
-
-              <button
-                className={`nav-item ${
-                  activePage === 'applications'
-                    ? 'active'
-                    : ''
-                }`}
-                onClick={() => {
-                  setActivePage('applications')
-                  setSelectedApplication(null)
-                }}
-              >
-                Заявки
-              </button>
-
-              <button className="nav-item">
-                Профиль
-              </button>
-
-            </nav>
-
-            <button
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              Выйти
-            </button>
-
-          </aside>
+          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
 
 
           {/* ОСНОВНАЯ ЧАСТЬ */}
@@ -403,6 +448,228 @@ function App() {
       )
     }
 
+    
+    // =========================
+    // СТРАНИЦА КЛИЕНТОВ ОПЕРАТОРА
+    // =========================
+
+    if (activePage === 'clients' && currentUser.role === 'operator') {
+      return (
+        <main className="dashboard">
+          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+
+          <section className="dashboard-content">
+            <header className="dashboard-header">
+              <div>
+                <p className="dashboard-label">ОПЕРАТОР</p>
+                <h1>Клиенты</h1>
+              </div>
+            </header>
+
+            <section className="applications-section">
+              <h2>Список клиентов</h2>
+
+              <div className="applications-list">
+                {clientList.map((client) => {
+                  const clientApplications = applicationList.filter(
+                    (application) => application.client === client.name
+                  )
+
+                  return (
+                    <div className="application-card" key={client.id}>
+                      <div className="application-number">
+                        #{client.id}
+                      </div>
+
+                      <div className="application-info">
+                        <strong>{client.name}</strong>
+                        <span>{client.phone}</span>
+                        <span>
+                          Заявок: {clientApplications.length}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </section>
+        </main>
+      )
+    }
+
+    
+    // =========================
+    // СТРАНИЦА СКЛАДА!!!!
+    // =========================
+
+    if (
+      activePage === 'stock' &&
+      (currentUser.role === 'admin' || currentUser.role === 'repairer')
+    ) {
+      const filteredStock = stock.filter((part) =>
+        part.name.toLowerCase().includes(stockSearch.toLowerCase())
+      )
+
+      const handleAddPart = () => {
+        if (!newPartName.trim() || !newPartQuantity || !newPartPrice) {
+          setError('Заполни все поля запчасти')
+          return
+        }
+
+        const quantity = Number(newPartQuantity)
+        const price = Number(newPartPrice)
+
+        if (
+          !Number.isFinite(quantity) ||
+          !Number.isFinite(price) ||
+          quantity < 0 ||
+          price < 0
+        ) {
+          setError('Количество и цена должны быть неотрицательными числами')
+          return
+        }
+
+        const nextId = Math.max(0, ...stock.map((part) => part.id)) + 1
+
+        setStock((prev) => [
+          ...prev,
+          {
+            id: nextId,
+            name: newPartName.trim(),
+            quantity,
+            price,
+          },
+        ])
+
+        setNewPartName('')
+        setNewPartQuantity('1')
+        setNewPartPrice('')
+        setError('')
+      }
+
+      return (
+        <main className="dashboard">
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+
+          <section className="dashboard-content">
+            <header className="dashboard-header">
+              <div>
+                <p className="dashboard-label">
+                  {currentUser.role === 'admin' ? 'АДМИНИСТРАТОР' : 'МАСТЕР'}
+                </p>
+                <h1>Склад запчастей</h1>
+              </div>
+
+              <div className="user-info">
+                <div className="user-avatar">
+                  {currentUser.name.charAt(0)}
+                </div>
+                <div>
+                  <strong>{currentUser.name}</strong>
+                  <span>{getRoleName(currentUser.role)}</span>
+                </div>
+              </div>
+            </header>
+
+            <section className="applications-section">
+              <div className="section-header">
+                <div>
+                  <h2>Запчасти</h2>
+                  <p>Всего позиций: {stock.length}</p>
+                </div>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Поиск запчастей..."
+                value={stockSearch}
+                onChange={(event) => setStockSearch(event.target.value)}
+              />
+
+              {currentUser.role === 'admin' && (
+                <div className="application-card stock-form-card">
+                  <div className="application-info">
+                    <h3>Добавить запчасть</h3>
+
+                    <input
+                      type="text"
+                      placeholder="Название запчасти"
+                      value={newPartName}
+                      onChange={(event) => setNewPartName(event.target.value)}
+                    />
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="Количество"
+                      value={newPartQuantity}
+                      onChange={(event) => setNewPartQuantity(event.target.value)}
+                    />
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Цена за единицу, ₽"
+                      value={newPartPrice}
+                      onChange={(event) => setNewPartPrice(event.target.value)}
+                    />
+
+                    <button className="primary-button" onClick={handleAddPart}>
+                      Добавить запчасть
+                    </button>
+
+                    {error && <p>{error}</p>}
+                  </div>
+                </div>
+              )}
+
+              <div className="applications-list">
+                {filteredStock.length === 0 ? (
+                  <p>Запчасти не найдены.</p>
+                ) : (
+                  filteredStock.map((part) => (
+                    <div className="application-card" key={part.id}>
+                      <div className="application-number">#{part.id}</div>
+
+                      <div className="application-info">
+                        <strong>{part.name}</strong>
+                        <span>В наличии: {part.quantity} шт.</span>
+                        <span>
+                          Цена: {part.price.toLocaleString('ru-RU')} ₽
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </section>
+        </main>
+      )
+    }
+
 
     // =========================
     // СТРАНИЦА "ЗАЯВКИ"
@@ -412,55 +679,18 @@ function App() {
 
       return (
         <main className="dashboard">
-
-          {/* БОКОВОЕ МЕНЮ */}
-
-          <aside className="sidebar">
-
-            <div className="sidebar-logo">
-              <span>Fix</span>
-              <strong>Point</strong>
-            </div>
-
-            <nav className="sidebar-nav">
-
-              <button
-                className="nav-item"
-                onClick={() => {
-                  setActivePage('home')
-                  setSelectedApplication(null)
-                }}
-              >
-                Главная
-              </button>
-
-
-              <button
-                className="nav-item active"
-                onClick={() => {
-                  setActivePage('applications')
-                  setSelectedApplication(null)
-                }}
-              >
-                Заявки
-              </button>
-
-
-              <button className="nav-item">
-                Профиль
-              </button>
-
-            </nav>
-
-
-            <button
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              Выйти
-            </button>
-
-          </aside>
+          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+          
 
 
           {/* ОСНОВНАЯ ЧАСТЬ */}
@@ -522,9 +752,52 @@ function App() {
               </div>
 
 
+              
+                {currentUser.role === 'operator' && (
+                  <div className="details-card">
+                    <h2>Создать заявку</h2>
+
+                    <label>
+                      Клиент
+
+                      <input
+                        type="text"
+                        placeholder="Имя клиента"
+                        value={newApplicationClient}
+                        onChange={(event) =>
+                          setNewApplicationClient(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Устройство
+
+                      <input
+                        type="text"
+                        placeholder="Например, ноутбук ASUS"
+                        value={newApplicationDevice}
+                        onChange={(event) =>
+                          setNewApplicationDevice(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <button
+                      className="login-button"
+                      onClick={handleAddApplication}
+                    >
+                      Создать заявку
+                    </button>
+
+                    {error && <p className="login-error">{error}</p>}
+                  </div>
+                )}
+
+
               <div className="applications-list">
 
-                {applications.map(
+                {applicationList.map(
                   (application) => {
 
                     const currentStatus =
@@ -584,6 +857,59 @@ function App() {
       )
     }
 
+    
+    // =========================
+    // СТРАНИЦА СОТРУДНИКОВ
+    // =========================
+
+    if (activePage === 'employees' && currentUser.role === 'admin') {
+      return (
+        <main className="dashboard">
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+
+          <EmployeesPage
+            employees={employeeList}
+            onToggleActive={(login) => {
+              setEmployeeList((prev) =>
+                prev.map((employee) =>
+                  employee.login === login
+                    ? { ...employee, active: !employee.active }
+                    : employee
+                )
+              )
+            }}
+            onGenerateCode={(login) => {
+              const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+              let newCode = ''
+
+              for (let i = 0; i < 12; i++) {
+                newCode += characters.charAt(
+                  Math.floor(Math.random() * characters.length)
+                )
+              }
+
+              setEmployeeList((prev) =>
+                prev.map((employee) =>
+                  employee.login === login
+                    ? { ...employee, password: newCode }
+                    : employee
+                )
+              )
+            }}
+          />
+        </main>
+      )
+    }
+
 
     // =========================
     // ГЛАВНАЯ СТРАНИЦА
@@ -591,56 +917,17 @@ function App() {
 
     return (
       <main className="dashboard">
-
-        {/* БОКОВОЕ МЕНЮ */}
-
-        <aside className="sidebar">
-
-          <div className="sidebar-logo">
-            <span>Fix</span>
-            <strong>Point</strong>
-          </div>
-
-
-          <nav className="sidebar-nav">
-
-            <button
-              className="nav-item active"
-              onClick={() => {
-                setActivePage('home')
-                setSelectedApplication(null)
-              }}
-            >
-              Главная
-            </button>
-
-
-            <button
-              className="nav-item"
-              onClick={() => {
-                setActivePage('applications')
-                setSelectedApplication(null)
-              }}
-            >
-              Заявки
-            </button>
-
-
-            <button className="nav-item">
-              Профиль
-            </button>
-
-          </nav>
-
-
-          <button
-            className="logout-button"
-            onClick={handleLogout}
-          >
-            Выйти
-          </button>
-
-        </aside>
+        {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+        <Sidebar
+          role={currentUser.role}
+          activePage={activePage}
+          onNavigate={(page) => {
+            setActivePage(page)
+            setSelectedApplication(null)
+            setError('')
+          }}
+          onLogout={handleLogout}
+        />
 
 
         {/* ОСНОВНАЯ ЧАСТЬ */}
@@ -770,7 +1057,7 @@ function App() {
 
             <div className="applications-list">
 
-              {applications.map(
+              {applicationList.map(
                 (application) => {
 
                   const currentStatus =
@@ -849,43 +1136,25 @@ function App() {
           </h1>
 
           <p className="welcome-description">
-            Войдите эбэбэбэ чето написать или не надо хз
+            Введите индивидуальный код доступа, выданный администратором.
           </p>
 
 
+          
           <div className="form">
-
             <label>
-              Логин
-
-              <input
-                type="text"
-                placeholder="Введите логин"
-                value={login}
-                onChange={(event) =>
-                  setLogin(
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-
-            <label>
-              Пароль
+              Код доступа сотрудника
 
               <input
                 type="password"
-                placeholder="Введите пароль"
-                value={password}
+                placeholder="Введите код доступа"
+                value={accessCode}
                 onChange={(event) =>
-                  setPassword(
-                    event.target.value
-                  )
+                  setAccessCode(event.target.value)
                 }
+                autoComplete="current-password"
               />
             </label>
-
 
             <button
               className="login-button"
@@ -894,24 +1163,22 @@ function App() {
               Войти
             </button>
 
-
             {error && (
               <p className="login-error">
                 {error}
               </p>
             )}
 
-
             <button
               className="back-button"
               onClick={() => {
                 setShowLogin(false)
+                setAccessCode('')
                 setError('')
               }}
             >
-              ← На главную 
+              ← На главную
             </button>
-
           </div>
 
         </div>

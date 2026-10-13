@@ -737,3 +737,31 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Форма добавления запчастей на складе */
+.stock-form-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.stock-form-card .application-info {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.stock-form-card input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+.stock-form-card .primary-button {
+  max-width: 100%;
+}
