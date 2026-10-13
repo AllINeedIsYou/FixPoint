@@ -107,6 +107,7 @@ class ApplicationShema(ApplicationCreateShema):
 
     id: int
     client_id: int
+    code: str = Field(min_length=8, max_length=8)
     check_result: str | None = None
     status_info: int
     status: str
