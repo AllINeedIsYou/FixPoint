@@ -335,10 +335,10 @@ MVP версия.
 
 ---
 
-## 📌 Автор
+## 📌 Авторы
 
-ALLINeedIsYou
+ALLINeedIsYou, GuLiKK,nananowi
 
-## 🤝 Помощник
 
-GuLiKK
+
+
