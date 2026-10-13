@@ -192,7 +192,7 @@ def create_client_session(db, client_id):
     return token, expires_at
 
 
-def get_current_client(token=Cookie(default=None, alias=CLIENT_SESSION_COOKIE), db=Depends(get_db)):
+def get_current_client(token=Cookie(default=None, alias=CLIENT_SESSION_COOKIE, include_in_schema=False), db=Depends(get_db)):
     if not token:
         raise HTTPException(status_code=401, detail="Войдите в аккаунт клиента")
     entry = db.query(ClientSessions).filter(
@@ -243,7 +243,7 @@ def current_client_endpoint(client=Depends(get_current_client)):
 
 
 @router_auth.post("/client/logout", status_code=204, summary="Выход клиента")
-def logout_client_endpoint(token=Cookie(default=None, alias=CLIENT_SESSION_COOKIE), db=Depends(get_db)):
+def logout_client_endpoint(token=Cookie(default=None, alias=CLIENT_SESSION_COOKIE, include_in_schema=False), db=Depends(get_db)):
     if token:
         entry = db.query(ClientSessions).filter(ClientSessions.token_hash == hash_code(token)).first()
         if entry is not None:
