@@ -126,6 +126,24 @@ def require_role(required_role: str):
 
 CLIENT_SESSION_COOKIE = "client_session"
 
+#пароли клиентов: scrypt с солью. голый sha256 подбирается перебором за минуты, если утечет БД
+_SCRYPT = {"n": 2 ** 14, "r": 8, "p": 1}
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(password.encode("utf-8"), salt=salt, **_SCRYPT)
+    return f"scrypt${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    if stored.startswith("scrypt$"):
+        _, salt, digest = stored.split("$")
+        actual = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt), **_SCRYPT)
+        return secrets.compare_digest(actual.hex(), digest)
+    #аккаунты, созданные до перехода на scrypt (голый sha256)
+    return secrets.compare_digest(hash_code(password), stored)
+
 
 def validate_client_data(schema, data):
     try:
@@ -143,7 +161,7 @@ def register_client(db, client_data):
     dump_client=client_data.model_dump(exclude={"password"})
     dump_client["created_at"]=now
 
-    new_client=Client(**dump_client,password_hash=hash_code(client_data.password))
+    new_client=Client(**dump_client,password_hash=hash_password(client_data.password))
 
     try:
         db.add(new_client)
@@ -168,8 +186,12 @@ def authenticate_client(db, client_data):
     client = db.query(Client).filter(Client.login == client_data.username).first()
     if client is None or client.password_hash is None:
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
-    if not secrets.compare_digest(hash_code(client_data.password), client.password_hash):
+    if not verify_password(client_data.password, client.password_hash):
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
+    #старый хеш sha256 при успешном входе заменяем на scrypt
+    if not client.password_hash.startswith("scrypt$"):
+        client.password_hash = hash_password(client_data.password)
+        db.commit()
     return client
 
 
@@ -177,6 +199,8 @@ def create_client_session(db, client_id):
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(days=7)
+    #истекшие сессии этого клиента больше не нужны
+    db.query(ClientSessions).filter(ClientSessions.client_id == client_id, ClientSessions.expires_at <= now).delete()
     entry = ClientSessions(
         client_id=client_id,
         token_hash=hash_code(token),

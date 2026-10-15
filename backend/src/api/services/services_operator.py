@@ -6,7 +6,7 @@ from starlette import status
 
 from src.models import Application, Client, Stage, STATUS_DIAGNOSED, STATUS_ISSUED
 from src.shemas import ApplicationCreateShema
-from src.api.services.services import generate_application_code
+from src.api.services.services import build_application
 
 def _same_person(client: Client, FIO: str, email: str) -> bool:
     return client.FIO.strip().casefold() == FIO.strip().casefold() and client.email.lower() == email.lower()
@@ -28,15 +28,12 @@ def create_application(data: ApplicationCreateShema, db: Session, retry: bool = 
                    f"Проверьте ФИО и email или укажите другой телефон"
         )
 
-    application = Application(
-        client=client, info=data.info, device=data.device, device_model=data.device_model,
-        code=generate_application_code(),
-    )
+    application = build_application(client, data)
     db.add(application)
     try:
         db.commit()
     except IntegrityError:
-        #параллельный запрос успел создать клиента с этим телефоном, повторяем уже с ним
+        #параллельный запрос успел создать клиента с этим телефоном (или совпал код заявки), повторяем
         db.rollback()
         if not retry:
             raise

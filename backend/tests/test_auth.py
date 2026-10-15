@@ -61,3 +61,45 @@ def test_token_of_deleted_or_fake_employee(client):
         data = {"role": "repairer"} if sub is None else {"sub": sub, "role": "repairer"}
         headers = {"Authorization": f"Bearer {create_access_token(data)}"}
         assert client.get("/repairer/get_applications", headers=headers).status_code == 401
+
+
+def test_client_password_is_salted_scrypt(client, db_session_factory):
+    from src.models import Client
+    body = {"FIO": "Иван", "number": "+79161112233", "email": "i@example.com", "password": "password123"}
+    client.post("/auth/client/register", json={**body, "login": "first"})
+    client.post("/auth/client/register", json={**body, "login": "second", "number": "+79161112244"})
+    with db_session_factory() as db:
+        hashes = [c.password_hash for c in db.query(Client).order_by(Client.id)]
+    assert all(h.startswith("scrypt$") and "password123" not in h for h in hashes)
+    # одинаковые пароли - разные хеши (соль)
+    assert hashes[0] != hashes[1]
+    assert client.post("/auth/client/login", json={"username": "first", "password": "password123"}).status_code == 200
+    assert client.post("/auth/client/login", json={"username": "first", "password": "password124"}).status_code == 401
+
+
+def test_legacy_sha256_password_still_works_and_is_upgraded(client, db_session_factory):
+    from src.auth.auth import hash_code
+    from src.models import Client
+    with db_session_factory() as db:
+        db.add(Client(FIO="Старый", number="tel:+7-916-111-22-55", email="o@example.com", login="old",
+                      password_hash=hash_code("password123")))
+        db.commit()
+    assert client.post("/auth/client/login", json={"username": "old", "password": "wrong-pass"}).status_code == 401
+    assert client.post("/auth/client/login", json={"username": "old", "password": "password123"}).status_code == 200
+    with db_session_factory() as db:
+        assert db.query(Client).filter(Client.login == "old").one().password_hash.startswith("scrypt$")
+    assert client.post("/auth/client/login", json={"username": "old", "password": "password123"}).status_code == 200
+
+
+def test_expired_sessions_are_removed_on_login(client, db_session_factory):
+    from datetime import datetime, timedelta, timezone
+    from src.models import ClientSessions
+    body = {"FIO": "Иван", "number": "+79161112233", "email": "i@example.com", "login": "ivan", "password": "password123"}
+    client_id = client.post("/auth/client/register", json=body).json()["id"]
+    old = datetime.now(timezone.utc) - timedelta(days=30)
+    with db_session_factory() as db:
+        db.add(ClientSessions(client_id=client_id, token_hash="x" * 64, created_at=old, expires_at=old))
+        db.commit()
+    client.post("/auth/client/login", json={"username": "ivan", "password": "password123"})
+    with db_session_factory() as db:
+        assert [s.token_hash for s in db.query(ClientSessions)] != [] and "x" * 64 not in [s.token_hash for s in db.query(ClientSessions)]

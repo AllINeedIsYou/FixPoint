@@ -26,15 +26,42 @@ CleanStr = Annotated[str, AfterValidator(check_text)]
 
 
 # Схема для заявки(отображаемая пользователю)
-class ApplicationCreateShema(BaseModel):
+# Данные самой заявки: их заполняет и оператор, и клиент
+class ApplicationDetailsShema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    FIO: CleanStr = Field(max_length=255)
-    number: PhoneNumber
-    email: EmailStr
     info: CleanStr = Field(max_length=1000)
     device: CleanStr = Field(max_length=1000)
     device_model: CleanStr = Field(max_length=1000)
+    address: CleanStr = Field(min_length=1, max_length=1000)
+
+    @field_validator("address", mode="before")
+    @classmethod
+    def strip_address(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+# Заявка от оператора: данные клиента + данные заявки
+class ApplicationCreateShema(ApplicationDetailsShema):
+    FIO: CleanStr = Field(max_length=255)
+    number: PhoneNumber
+    email: EmailStr
+
+
+# Заявка от клиента: клиент берется из сессии, вводит только данные заявки
+class ClientApplicationCreateShema(ApplicationDetailsShema):
+    pass
+
+
+# Заявка в списке клиента: без внутренних подробностей ремонта, код нужен для проверки статуса
+class ClientApplicationShema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    code: str
+    info: str
+    device: str
+    device_model: str
+    created_at: datetime
 
 
 # Схема для запчасти на складе(админ добавляет), пробелы по краям названия обрезаются
@@ -107,6 +134,7 @@ class ApplicationShema(ApplicationCreateShema):
 
     id: int
     client_id: int
+    created_at: datetime
     code: str = Field(min_length=8, max_length=8)
     check_result: str | None = None
     status_info: int
@@ -155,7 +183,7 @@ class TokenResponseSchema(BaseModel):
     role: str
 
 class ClientLoginSchema(BaseModel):
-    username: str = Field(min_length=1, max_length=40)
+    username: CleanStr = Field(min_length=1, max_length=40)
     password: CleanStr = Field(min_length=1, max_length=128)
 
 

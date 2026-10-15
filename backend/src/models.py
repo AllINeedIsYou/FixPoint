@@ -82,6 +82,11 @@ class Application(Base):
 
     device_model: Mapped[str] = mapped_column(Text,nullable=False)
 
+    #адрес клиента по этой заявке (при регистрации адрес не спрашивается, и у разных заявок он может отличаться)
+    address: Mapped[str] = mapped_column(Text,nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
     status_info: Mapped[int]=mapped_column(Integer,default=Stage.CREATED)
 
     status:Mapped[str]=mapped_column(String(400),default=STATUS_CREATED)

@@ -30,7 +30,8 @@ def test_full_flow(client, staff, new_application, login_application_client):
     r = client.post(f"/operator/{app_id}/issue", headers=staff["operator"])
     assert r.status_code == 200 and r.json()["status_info"] == Stage.ISSUED and r.json()["status"] == STATUS_ISSUED
     login_application_client(app_id)
-    assert STATUS_ISSUED in client.get("/client/status", params={"application_id": app_id}).json()
+    code = get_application(client, staff["repairer"], app_id)["code"]
+    assert STATUS_ISSUED in client.get("/client/status", params={"application_code": code}).json()
 
 
 def test_repeat_diagnostics_forbidden(client, staff, new_application):
