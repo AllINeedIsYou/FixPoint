@@ -1,4 +1,4 @@
-# Repair Service MVP 🔧
+# Repair Service 🔧
 
 Backend MVP-система для управления заявками на ремонт техники.
 
