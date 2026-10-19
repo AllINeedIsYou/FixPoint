@@ -869,3 +869,15 @@
         scroll-behavior: auto !important;
     }
 }
+
+/* кнопки главного экрана выглядят как остальные CTA-ссылкиим */
+button.fp-primary-button {
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* кнопка в контактах не должна сжиматьься */
+.fp-contact-actions .fp-primary-button {
+  align-self: flex-start;
+}

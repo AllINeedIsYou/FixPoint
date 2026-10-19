@@ -1,11 +1,15 @@
-import './HomePage.css';
 
-// Функцияz, которую передаст App.tsx для открытия входа сотрудников.
+import './HomePage.css'
+
 type HomePageProps = {
-  onEmployeeClick: () => void;
-};
+  onEmployeeClick: () => void
+  onClientClick: () => void
+}
 
-export default function HomePage({ onEmployeeClick }: HomePageProps) {
+export default function HomePage({
+  onEmployeeClick,
+  onClientClick,
+}: HomePageProps) {
   return (
     <div className="fp-home">
       {/* Верхняя панель сайта */}
@@ -24,16 +28,19 @@ export default function HomePage({ onEmployeeClick }: HomePageProps) {
           <a href="#contacts">Контакты</a>
         </nav>
 
-        <button
-          className="fp-employee-button"
-          onClick={onEmployeeClick}
-        >
-          <span>↗</span> Сотрудникам
-        </button>
+        <div className="fp-header-actions">
+          <button
+            className="fp-employee-button"
+            type="button"
+            onClick={onEmployeeClick}
+          >
+            <span>↗</span> Сотрудникам
+          </button>
+        </div>
       </header>
 
       <main id="home">
-        {/* !!!!!Первый экран со слоганами из жпт, ПЕРЕДЕЛАЙ ПОТОМ АЛООО*/}
+        {/* Главный экран */}
         <section className="fp-hero">
           <div className="fp-hero-content">
             <div className="fp-eyebrow">
@@ -54,9 +61,15 @@ export default function HomePage({ onEmployeeClick }: HomePageProps) {
             </p>
 
             <div className="fp-hero-actions">
-              <a className="fp-primary-button" href="#contacts">
+              {/* Теперь заявка начинается с регистрации клиента */}
+              <button
+                className="fp-primary-button"
+                type="button"
+                onClick={onClientClick}
+              >
                 Оставить заявку <span>↗</span>
-              </a>
+              </button>
+
               <a className="fp-secondary-button" href="#process">
                 Как всё устроено
               </a>
@@ -78,7 +91,7 @@ export default function HomePage({ onEmployeeClick }: HomePageProps) {
             </div>
           </div>
 
-          {/* тут декоративная иллюстрация без внешних изображений(потом сделать) */}
+          {/* Декоративная иллюстрация устройства */}
           <div className="fp-hero-visual" aria-hidden="true">
             <div className="fp-orbit fp-orbit-one" />
             <div className="fp-orbit fp-orbit-two" />
@@ -132,7 +145,11 @@ export default function HomePage({ onEmployeeClick }: HomePageProps) {
           <div className="fp-section-heading">
             <div>
               <div className="fp-section-label">ЧЕМ МЫ ПОМОЖЕМ</div>
-              <h2>Техника заслуживает<br />второго шанса</h2>
+              <h2>
+                Техника заслуживает
+                <br />
+                второго шанса
+              </h2>
             </div>
             <p>
               От первичной проверки до завершения ремонта —
@@ -204,28 +221,34 @@ export default function HomePage({ onEmployeeClick }: HomePageProps) {
             <div className="fp-process-step">
               <span>04</span>
               <h3>Возвращаем технику</h3>
-              <p>Завершаем работы и подготавливаем устройство к выдаче.</p>
+              <p>
+                Завершаем работы и подготавливаем устройство к выдаче.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Контакты -пока демонстрационный блок */}
+        {/* Контактный блок */}
         <section className="fp-contact" id="contacts">
           <div>
-            <div className="fp-section-label">МЫ НА СВЯЗИ</div>
+            <div className="fp-section-label">ВАША ТЕХНИКА — НАШ ПРИОРИТЕТ</div>
             <h2>Начнём с вашей проблемы.</h2>
             <p>
-              Расскажите о неисправности — вместе разберёмся,
-              что делать дальше.
+              Создайте аккаунт, оставьте заявку и следите
+              за ходом ремонта в личном кабинете.
             </p>
           </div>
 
           <div className="fp-contact-actions">
-            <a className="fp-primary-button" href="mailto:">
-              Связаться с нами <span>↗</span>
-            </a>
+            <button
+              className="fp-primary-button"
+              type="button"
+              onClick={onClientClick}
+            >
+              Перейти к заявке <span>↗</span>
+            </button>
             <small>
-              тут контакты и форма заявки потом добавлю.
+              Для оформления заявки потребуется аккаунт клиента.
             </small>
           </div>
         </section>
@@ -245,11 +268,12 @@ export default function HomePage({ onEmployeeClick }: HomePageProps) {
 
         <button
           className="fp-footer-employee"
+          type="button"
           onClick={onEmployeeClick}
         >
           Вход для сотрудников ↗
         </button>
       </footer>
     </div>
-  );
+  )
 }

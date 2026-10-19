@@ -5,12 +5,22 @@ import {
   clients,
   stockParts
 } from './mockData'
+
+import type { UsedPart } from './RepairPartsPanel'
 import './App.css'
 import HomePage from './HomePage'
 //боковая менюшка
 import Sidebar from './Sidebar'
-// импорт страницы сотрудников для админа
+//сотрудники для адм
 import EmployeesPage from './pages/EmployeesPage'
+//работа с заявками
+import ApplicationDetails from './ApplicationDetails'
+//регистрация клиентуса
+import ClientAuth, { type ClientAccount } from './ClientAuth'
+//профиль клиента
+import ClientProfile from './ClientProfile'
+
+
 
 function App() {
   // =========================
@@ -41,10 +51,21 @@ function App() {
   const [applicationStatuses, setApplicationStatuses] =
     useState<Record<number, string>>({})
 
+  // Результаты диагностики храним отдельно для каждой заявки
+  const [applicationDiagnoses, setApplicationDiagnoses] =
+    useState<Record<number, string>>({})
+
   //эт локальный список пока без бд. чтобы новые заявки добавлялись в
   //  интерфейс, а не терялись из-за использования исходного массива.
   const [applicationList, setApplicationList] = useState<
-    { id: number; client: string; device: string; status: string }[]
+    {
+      id: number
+      client: string
+      clientId?: number
+      device: string
+      status: string
+      description?: string
+    }[]
   >(applications)
 
   //список сотрудников пока в памяти приложения
@@ -53,6 +74,15 @@ function App() {
   //локальные копии моковых данных которые можно изменять
   const [clientList, setClientList] = useState(clients)
   const [stock, setStock] = useState(stockParts)
+
+  // Запчасти, использованные в каждой заявке
+  const [applicationParts, setApplicationParts] =
+    useState<Record<number, UsedPart[]>>({})
+
+  // --- Авторизация клиентов ---
+  const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>([])
+  const [currentClient, setCurrentClient] = useState<ClientAccount | null>(null)
+  const [showClientAuth, setShowClientAuth] = useState(false)
 
   //поля создания заявок оператором
   const [newApplicationClient, setNewApplicationClient] = useState('')
@@ -63,6 +93,122 @@ function App() {
   const [newPartName, setNewPartName] = useState('')
   const [newPartQuantity, setNewPartQuantity] = useState('1')
   const [newPartPrice, setNewPartPrice] = useState('')
+
+  //обработчик создает заявку и связывает ее с акком клиентуса
+  function handleCreateClientApplication(
+    device: string,
+    description: string
+  ) {
+    if (!currentClient) return
+
+    const nextId =
+      applicationList.length > 0
+        ? Math.max(...applicationList.map((application) => application.id)) + 1
+        : 1
+
+    setApplicationList((prev) => [
+      ...prev,
+      {
+        id: nextId,
+        client: currentClient.name,
+        clientId: currentClient.id,
+        device,
+        description,
+        status: 'Новая',
+      },
+    ])
+  }
+
+  // Запчасти: здесь оставлен один комплект обработчиков, без дублирующих объявлений.
+  // Добавить одну единицу запчасти в заявку
+  const handleAddPartToApplication = (
+    applicationId: number,
+    stockPartId: number
+  ) => {
+    const part = stock.find((item) => item.id === stockPartId)
+
+    if (!part || part.quantity <= 0) {
+      return
+    }
+
+    // Уменьшаем остаток на складе
+    setStock((prev) =>
+      prev.map((item) =>
+        item.id === stockPartId
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      )
+    )
+
+    // Добавляем деталь в заявку или увеличиваем её количество
+    setApplicationParts((prev) => {
+      const currentParts = prev[applicationId] ?? []
+      const existingPart = currentParts.find(
+        (item) => item.stockPartId === stockPartId
+      )
+
+      if (existingPart) {
+        return {
+          ...prev,
+          [applicationId]: currentParts.map((item) =>
+            item.stockPartId === stockPartId
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          ),
+        }
+      }
+
+      const newPart: UsedPart = {
+        stockPartId: part.id,
+        name: part.name,
+        price: part.price,
+        quantity: 1,
+      }
+
+      return {
+        ...prev,
+        [applicationId]: [...currentParts, newPart],
+      }
+    })
+  }
+
+  // Убрать одну единицу запчасти из заявки и вернуть её на склад
+  const handleRemovePartFromApplication = (
+    applicationId: number,
+    stockPartId: number
+  ) => {
+    const currentParts = applicationParts[applicationId] ?? []
+    const usedPart = currentParts.find(
+      (item) => item.stockPartId === stockPartId
+    )
+
+    if (!usedPart) {
+      return
+    }
+
+    setStock((prev) =>
+      prev.map((item) =>
+        item.id === stockPartId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    )
+
+    setApplicationParts((prev) => {
+      const updatedParts = (prev[applicationId] ?? [])
+        .map((item) =>
+          item.stockPartId === stockPartId
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+
+      return {
+        ...prev,
+        [applicationId]: updatedParts,
+      }
+    })
+  }
 
 
   // =========================
@@ -179,6 +325,7 @@ function App() {
     // Экранчик ПОДРОБНОСТЕЙ ЗАЯВКИ
     // =========================
 
+    
     if (selectedApplication !== null) {
       const application = applicationList.find(
         (item) => item.id === selectedApplication
@@ -188,15 +335,11 @@ function App() {
         return null
       }
 
-      // Получаем актуальный статус
       const currentStatus =
-        applicationStatuses[application.id] ??
-        application.status
+        applicationStatuses[application.id] ?? application.status
 
       return (
         <main className="dashboard">
-
-          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
           <Sidebar
             role={currentUser.role}
             activePage={activePage}
@@ -208,245 +351,44 @@ function App() {
             onLogout={handleLogout}
           />
 
-
-          {/* ОСНОВНАЯ ЧАСТЬ */}
-
           <section className="dashboard-content">
-
-            <button
-              className="back-button"
-              onClick={() => {
+            <ApplicationDetails
+              application={application}
+              currentStatus={currentStatus}
+              role={currentUser.role}
+              diagnosis={applicationDiagnoses[application.id] ?? ''}
+              onDiagnosisChange={(value) => {
+                setApplicationDiagnoses((prev) => ({
+                  ...prev,
+                  [application.id]: value,
+                }))
+              }}
+              onStatusChange={(status) => {
+                setApplicationStatuses((prev) => ({
+                  ...prev,
+                  [application.id]: status,
+                }))
+              }}
+              onBack={() => {
                 setSelectedApplication(null)
                 setActivePage('applications')
+                setError('')
               }}
-            >
-              ← Назад к заявкам
-            </button>
-
-
-            <div className="application-details">
-
-              <p className="dashboard-label">
-                ЗАЯВКА #{application.id}
-              </p>
-
-              <h1>
-                Информация о заявке
-              </h1>
-
-
-              {/* ОСНОВНАЯ ИНФОРМАЦИЯ */}
-
-              <div className="details-card">
-
-                <div className="detail-row">
-                  <span>Клиент</span>
-
-                  <strong>
-                    {application.client}
-                  </strong>
-                </div>
-
-
-                <div className="detail-row">
-                  <span>Устройство</span>
-
-                  <strong>
-                    {application.device}
-                  </strong>
-                </div>
-
-
-                <div className="detail-row">
-                  <span>Статус</span>
-
-                  <strong>
-                    {currentStatus}
-                  </strong>
-                </div>
-
-              </div>
-
-
-              {/* ДЕЙСТВИЯ ИНЖЕНЕРА */}
-
-              {currentUser.role === 'engineer' && (
-                <div className="role-actions">
-
-                  <h2>
-                    Действия инженера
-                  </h2>
-
-                  <div className="action-buttons">
-
-                    {currentStatus === 'Новая' && (
-                      <button
-                        className="action-button"
-                        onClick={() =>
-                          setApplicationStatuses(
-                            (prev) => ({
-                              ...prev,
-                              [application.id]:
-                                'В работе у инженера',
-                            })
-                          )
-                        }
-                      >
-                        Взять заявку
-                      </button>
-                    )}
-
-
-                    {currentStatus ===
-                      'В работе у инженера' && (
-                      <button
-                        className="action-button"
-                        onClick={() =>
-                          setApplicationStatuses(
-                            (prev) => ({
-                              ...prev,
-                              [application.id]:
-                                'Диагностика',
-                            })
-                          )
-                        }
-                      >
-                        Провести диагностику
-                      </button>
-                    )}
-
-
-                    {currentStatus ===
-                      'Диагностика' && (
-                      <button
-                        className="action-button"
-                        onClick={() =>
-                          setApplicationStatuses(
-                            (prev) => ({
-                              ...prev,
-                              [application.id]:
-                                'Ожидание ремонта',
-                            })
-                          )
-                        }
-                      >
-                        Завершить диагностику
-                      </button>
-                    )}
-
-                  </div>
-
-                </div>
-              )}
-
-
-              {/* ДЕЙСТВИЯ МАСТЕРА */}
-
-              {currentUser.role === 'repairer' && (
-                <div className="role-actions">
-
-                  <h2>
-                    Действия мастера
-                  </h2>
-
-                  <div className="action-buttons">
-
-                    {currentStatus ===
-                      'Ожидание ремонта' && (
-                      <button
-                        className="action-button"
-                        onClick={() =>
-                          setApplicationStatuses(
-                            (prev) => ({
-                              ...prev,
-                              [application.id]:
-                                'В ремонте',
-                            })
-                          )
-                        }
-                      >
-                        Взять в ремонт
-                      </button>
-                    )}
-
-
-                    {currentStatus ===
-                      'В ремонте' && (
-                      <button
-                        className="action-button"
-                        onClick={() =>
-                          setApplicationStatuses(
-                            (prev) => ({
-                              ...prev,
-                              [application.id]:
-                                'Готово',
-                            })
-                          )
-                        }
-                      >
-                        Завершить ремонт
-                      </button>
-                    )}
-
-                  </div>
-
-                </div>
-              )}
-
-
-              {/* ИСТОРИЯ */}
-
-              <div className="status-history">
-
-                <h2>
-                  История заявки
-                </h2>
-
-                <div className="timeline">
-
-                  <div className="timeline-item completed">
-                    <strong>
-                      Заявка создана
-                    </strong>
-
-                    <span>
-                      Клиент оставил заявку
-                    </span>
-                  </div>
-
-
-                  <div className="timeline-item active-step">
-                    <strong>
-                      {currentStatus}
-                    </strong>
-
-                    <span>
-                      Текущий этап обработки
-                    </span>
-                  </div>
-
-
-                  <div className="timeline-item">
-                    <strong>
-                      Завершение ремонта
-                    </strong>
-
-                    <span>
-                      Ожидается
-                    </span>
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-
+              stock={stock}
+              usedParts={applicationParts[application.id] ?? []}
+              canEditParts={currentStatus === 'В ремонте'}
+              onAddPart={(stockPartId) =>
+                handleAddPartToApplication(application.id, stockPartId)
+              }
+              onRemovePart={(stockPartId) =>
+                handleRemovePartFromApplication(application.id, stockPartId)
+              }
+            />
           </section>
-
         </main>
       )
     }
+
 
     
     // =========================
@@ -1115,6 +1057,47 @@ function App() {
     )
   }
 
+  // ===========================
+  // РЕГИСТРАЦИЯ И ВХОД КЛИЕНТА
+  // ===========================
+
+  if (showClientAuth) {
+    return (
+      <ClientAuth
+        accounts={clientAccounts}
+        onRegister={(client) => {
+          setClientAccounts((prev) => [...prev, client])
+        }}
+        onSuccess={(client) => {
+          setCurrentClient(client)
+          setShowClientAuth(false)
+          setShowLogin(false)
+          setError('')
+        }}
+        onBack={() => {
+          setShowClientAuth(false)
+          setError('')
+        }}
+      />
+    )
+  }
+
+  if (currentClient) {
+    return (
+      <ClientProfile
+        client={currentClient}
+        applications={applicationList}
+        onCreateApplication={handleCreateClientApplication}
+        onLogout={() => {
+          setCurrentClient(null)
+          setShowClientAuth(false)
+          setShowLogin(false)
+        }}
+      />
+    )
+  }
+
+
 
   // ===========================
   // ЭКРАН ВХОДАА
@@ -1197,6 +1180,12 @@ function App() {
     <HomePage
       onEmployeeClick={() => {
         setShowLogin(true)
+        setShowClientAuth(false)
+        setError('')
+      }}
+      onClientClick={() => {
+        setShowClientAuth(true)
+        setShowLogin(false)
         setError('')
       }}
     />
