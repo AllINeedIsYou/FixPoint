@@ -5,7 +5,7 @@ from sqlalchemy.exc import DataError
 
 from src.shemas import MAX_PRICE, MAX_QUANTITY
 
-APPLICATION = {"FIO": "Иван", "number": "+79161234567", "email": "ivan@example.com", "info": "не включается", "device": "Телефон", "device_model": "Модель"}
+APPLICATION = {"FIO": "Иван", "number": "+79161234567", "email": "ivan@example.com", "info": "не включается", "device": "Телефон", "device_model": "Модель", "address": "Москва, ул. Ленина, 1"}
 
 # \x00 и одиночный суррогат Postgres не сохраняет (раньше это давало 500), суррогат шлем \ud800-эскейпом как настоящий клиент
 BAD_STRINGS = ["a\x00b", "\ud800"]

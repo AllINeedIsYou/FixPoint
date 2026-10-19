@@ -34,3 +34,10 @@ def generate_access_code(length: int = 12):
 def generate_application_code() -> str:
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for i in range(8))
+
+#новая заявка клиента с уникальным кодом, одинаково для оператора и для самого клиента
+def build_application(client, data) -> Application:
+    return Application(
+        client=client, info=data.info, device=data.device, device_model=data.device_model,
+        address=data.address, code=generate_application_code(),
+    )

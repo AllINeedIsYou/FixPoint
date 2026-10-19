@@ -1,4 +1,4 @@
-# Repair Service MVP 🔧
+# Repair Service 🔧
 
 Backend MVP-система для управления заявками на ремонт техники.
 
@@ -10,13 +10,16 @@ Backend MVP-система для управления заявками на р�
 
 # Клиент
 
-* Проверка статуса своей заявки после входа: по ID (`application_id`) или коду (`application_code`).
+* Регистрация и вход по логину и паролю (`/auth/client/register`, `/auth/client/login`).
+* Создание заявки (`POST /client/applications`): описание, устройство, модель и адрес, ФИО и телефон берутся из аккаунта. В ответе код заявки.
+* Список своих заявок (`GET /client/applications`): код, описание, устройство, модель, время создания. Новые сверху.
+* Проверка статуса заявки после входа по коду (`/client/status?application_code=`).
 * Получение информации о текущем этапе ремонта.
 * Получение контактов оператора.
 
 ### Оператор
 
-* Создание новых заявок с обязательными полями `device` и `device_model`. Клиент определяется по телефону: повторное обращение попадает к тому же клиенту, а если телефон уже есть с другими ФИО или email, вернётся 400 с данными существующего клиента.
+* Создание новых заявок с обязательными полями `device`, `device_model` и `address` (адрес клиента). Время создания заявки (`created_at`) проставляется автоматически. Клиент определяется по телефону: повторное обращение попадает к тому же клиенту, а если телефон уже есть с другими ФИО или email, вернётся 400 с данными существующего клиента.
 * Просмотр списка заявок.
 * Список клиентов с поиском по ФИО или цифрам телефона (`/operator/clients?search=`) и история обращений клиента (`/operator/clients/{id}/applications`).
 * Удаление заявок.
@@ -142,7 +145,11 @@ python -m pip install -r backend/requirements.txt
 >
 > ```bash
 > psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -1 -f backend/migrations/001_clients_and_check.sql
+> psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -1 -f backend/migrations/002_client_accounts_and_codes.sql
+> psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -1 -f backend/migrations/003_application_address_and_time.sql
 > ```
+>
+> `001` — клиенты, этап проверки ремонта, склад и брони; `002` — аккаунты и сессии клиентов, устройство и код заявки (старым заявкам код генерируется автоматически); `003` — адрес и время создания заявки (у старых заявок адрес «не указан», время — момент миграции). Запускать по порядку.
 
 Строка подключения к БД хранится в `backend/.env` (не коммитится в git) и подхватывается через `pydantic-settings`.
 
@@ -172,14 +179,7 @@ uvicorn main:app --reload
 этого файла нет; точка входа находится в `backend/main.py`.
 Настройки загружаются из `backend/.env` независимо от текущей папки.
 
-После обновления проекта существующую PostgreSQL-базу нужно обновить миграциями.
-Миграция `002_client_auth.sql` добавляет аккаунты клиентов, а `003_application_codes.sql`
-добавляет коды существующим заявкам без удаления данных:
-
-```bash
-psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -f backend/migrations/002_client_auth.sql
-psql "postgresql://user:password@localhost:5432/database" -v ON_ERROR_STOP=1 -1 -f backend/migrations/003_application_codes.sql
-```
+После обновления проекта существующую базу нужно обновить миграциями, см. раздел «Настройка базы данных».
 
 После запуска документация API доступна:
 
@@ -345,7 +345,7 @@ MVP версия.
 
 ## 📌 Авторы
 
-ALLINeedIsYou, GuLiKK,nananowi
+ALLINeedIsYou, GuLiKK, nananowi
 
 
 

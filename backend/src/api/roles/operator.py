@@ -5,7 +5,7 @@ from src.api.services.services_operator import (del_elements_aplication_by_id, i
                                                create_application, get_clients, get_client_applications)
 from src.auth.auth import require_role
 from src.api.services.services_admin import release_application
-from src.shemas import ApplicationCreateShema, ApplicationShema, ClientShema
+from src.shemas import ApplicationCreateShema, ApplicationShema, ClientShema, CleanStr
 from src.databases.database import get_db
 
 #номер оператора для связи клиента с оператором
@@ -50,7 +50,7 @@ def issue_application_endpoint(application_id: int, db: Session = Depends(get_db
 
 #Список клиентов с id их заявок, поиск по части ФИО или телефона
 @router_operator.get('/clients', response_model=list[ClientShema], summary='Список клиентов', dependencies=[Depends(require_role("operator"))])
-def get_clients_endpoint(search: str | None = None, db: Session = Depends(get_db)):
+def get_clients_endpoint(search: CleanStr | None = None, db: Session = Depends(get_db)):
     return get_clients(db=db, search=search)
 
 

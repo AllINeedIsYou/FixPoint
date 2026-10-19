@@ -90,7 +90,7 @@ def new_application(client, staff):
     def make():
         r = client.post(
             "/operator/add_application",
-            json={"FIO": "Иван", "number": "+79161234567", "email": "ivan@example.com", "info": "не включается", "device": "Телефон", "device_model": "Модель"},
+            json={"FIO": "Иван", "number": "+79161234567", "email": "ivan@example.com", "info": "не включается", "device": "Телефон", "device_model": "Модель", "address": "Москва, ул. Ленина, 1"},
             headers=staff["operator"],
         )
         assert r.status_code == 200, r.text
