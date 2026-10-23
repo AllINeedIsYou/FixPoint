@@ -4,7 +4,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
 
-from src.models import Application, Client, Stage, STATUS_DIAGNOSED, STATUS_ISSUED
+from src.models import (Application, Client, Stage, STATUS_DIAGNOSED, STATUS_ISSUED,
+                        STATUS_COURIER_DISPATCHED, STATUS_COURIER_PICKED_UP, STATUS_ARRIVED)
+from src.application_flow import ApplicationSource, DeliveryStatus
 from src.shemas import ApplicationCreateShema
 from src.api.services.services import build_application
 
@@ -88,6 +90,39 @@ def get_application_for_update(application_id: int, db: Session) -> Application:
             detail=f"Заявка с id={application_id} не найдена"
         )
     return application
+
+
+def update_delivery(application_id: int, target: str, db: Session) -> Application:
+    application = get_application_for_update(application_id, db)
+    if application.source != ApplicationSource.ONLINE:
+        raise HTTPException(status_code=400, detail="Этапы курьера доступны только для онлайн-заявок")
+    if application.next_delivery_status != target:
+        raise HTTPException(status_code=409, detail="Этап доставки уже изменён или нарушен порядок. Обновите заявку и выберите следующий доступный шаг.")
+    stages = {
+        DeliveryStatus.COURIER_DISPATCHED: (Stage.COURIER_DISPATCHED, STATUS_COURIER_DISPATCHED),
+        DeliveryStatus.COURIER_PICKED_UP: (Stage.COURIER_PICKED_UP, STATUS_COURIER_PICKED_UP),
+        DeliveryStatus.ARRIVED: (Stage.CREATED, STATUS_ARRIVED),
+    }
+    application.status_info, application.status = stages[target]
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+def get_delivery_queue(db: Session, delivery_status: DeliveryStatus | None = None):
+    query = db.query(Application).filter(Application.source == ApplicationSource.ONLINE)
+    stages = {
+        DeliveryStatus.CREATED: Stage.ONLINE_CREATED,
+        DeliveryStatus.COURIER_DISPATCHED: Stage.COURIER_DISPATCHED,
+        DeliveryStatus.COURIER_PICKED_UP: Stage.COURIER_PICKED_UP,
+    }
+    if delivery_status == DeliveryStatus.ARRIVED:
+        query = query.filter(Application.status_info >= Stage.CREATED)
+    elif delivery_status is not None:
+        query = query.filter(Application.status_info == stages[delivery_status])
+    else:
+        query = query.filter(Application.status_info < Stage.CREATED)
+    return query.order_by(Application.courier_visit_at.asc(), Application.id.asc()).all()
 
 
 #выдача устройства клиенту, возможна только после пройденной проверки ремонта

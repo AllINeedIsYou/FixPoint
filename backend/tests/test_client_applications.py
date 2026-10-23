@@ -4,7 +4,8 @@ import pytest
 
 from .conftest import get_application
 
-APPLICATION = {"info": "не включается", "device": "Ноутбук", "device_model": "Lenovo X1", "address": "Москва, ул. Ленина, 1"}
+APPLICATION = {"info": "не включается", "device": "Ноутбук", "device_model": "Lenovo X1", "address": "Москва, ул. Ленина, 1",
+               "courier_visit_at": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()}
 
 
 @pytest.fixture
@@ -45,7 +46,7 @@ def test_client_creates_application(client, staff, logged_client):
     application = next(a for a in client.get("/operator/get_applications", headers=staff["operator"]).json() if a["code"] == data["code"])
     assert application["FIO"] == "Иван Петров" and application["client_id"] == logged_client["id"]
     assert application["address"] == APPLICATION["address"] and application["created_at"]
-    assert application["status_info"] == 0
+    assert application["status_info"] == -3
 
     # статус по коду
     assert "Иван Петров" in client.get("/client/status", params={"application_code": data["code"]}).json()
@@ -58,7 +59,8 @@ def test_client_sees_only_own_applications_newest_first(client, staff, register,
     r = client.get("/client/applications")
     assert r.status_code == 200
     assert [a["code"] for a in r.json()] == [second["code"], first["code"]]
-    assert set(r.json()[0]) == {"id", "code", "info", "device", "device_model", "created_at", "status", "status_info"}
+    assert set(r.json()[0]) == {"id", "code", "info", "device", "device_model", "created_at", "status", "status_info",
+                                "source", "source_label", "courier_visit_at", "delivery_status"}
 
     # заявки другого клиента не видны
     client.post("/auth/client/logout")
@@ -89,7 +91,7 @@ def test_operator_application_requires_address(client, staff):
 
 
 def test_client_application_validation(client, logged_client):
-    for field in ("info", "device", "device_model", "address"):
+    for field in ("info", "device", "device_model", "address", "courier_visit_at"):
         payload = {k: v for k, v in APPLICATION.items() if k != field}
         assert client.post("/client/applications", json=payload).status_code == 422
     assert client.post("/client/applications", json={**APPLICATION, "address": "   "}).status_code == 422

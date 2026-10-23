@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.api.services.services import get_all_applications
 from src.api.services.services_operator import (del_elements_aplication_by_id, issue_application,
-                                               create_application, get_clients, get_client_applications)
+                                               create_application, get_clients, get_client_applications, update_delivery, get_delivery_queue)
+from src.application_flow import DeliveryStatus
 from src.auth.auth import require_role
 from src.api.services.services_admin import release_application
-from src.shemas import ApplicationCreateShema, ApplicationShema, ClientShema, CleanStr
+from src.shemas import ApplicationCreateShema, ApplicationShema, ClientShema, CleanStr, DeliveryUpdateShema
 from src.databases.database import get_db
 
 #номер оператора для связи клиента с оператором
@@ -30,12 +31,33 @@ def add_application(
         "status": "application added",
         "id": new_application.id,
         "client_id": new_application.client_id,
-        "code": new_application.code
+        "code": new_application.code,
+        "source": new_application.source,
+        "source_label": new_application.source_label,
     }
 
 @router_operator.get("/get_applications",response_model=list[ApplicationShema],summary="Список заявок", dependencies=[Depends(require_role("operator"))])
 def get_application_operator(db: Session = Depends(get_db)):
     return get_all_applications(db=db)
+
+
+@router_operator.post(
+    '/{application_id}/delivery', response_model=ApplicationShema,
+    summary='Изменить этап доставки онлайн-заявки',
+    description='Передайте следующий этап из next_delivery_status. Курьер выехал → забрал посылку → прибыл в центр. Повторные действия и пропуски этапов возвращают 409.',
+    dependencies=[Depends(require_role("operator"))],
+)
+def update_delivery_endpoint(application_id: int, data: DeliveryUpdateShema, db: Session = Depends(get_db)):
+    return update_delivery(application_id=application_id, target=data.status, db=db)
+
+
+@router_operator.get(
+    '/deliveries', response_model=list[ApplicationShema], summary='Очередь курьера по времени встречи',
+    description='Без фильтра — онлайн-заявки, ещё не прибывшие в центр, начиная с самой ранней встречи. status позволяет выбрать отдельный этап доставки.',
+    dependencies=[Depends(require_role("operator"))],
+)
+def get_delivery_queue_endpoint(status: DeliveryStatus | None = None, db: Session = Depends(get_db)):
+    return get_delivery_queue(db=db, delivery_status=status)
 
 @router_operator.delete('/delete_applications/{application_id}',summary='Удаление заявки', dependencies=[Depends(require_role("operator"))])
 def del_aplication(application_id:int, db:Session=Depends(get_db)):

@@ -1,7 +1,8 @@
-from datetime import datetime
-from typing import Annotated
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from datetime import datetime, timezone
+from typing import Annotated, Literal
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from pydantic_extra_types.phone_numbers import PhoneNumber
+from src.application_flow import ApplicationSource, DeliveryStatus
 
 
 # Пределы под колонки БД: цена Numeric(10,2), количество Integer (с запасом на возвраты на склад).
@@ -50,11 +51,45 @@ class ApplicationCreateShema(ApplicationDetailsShema):
 
 # Заявка от клиента: клиент берется из сессии, вводит только данные заявки
 class ClientApplicationCreateShema(ApplicationDetailsShema):
-    pass
+    courier_visit_at: AwareDatetime = Field(
+        description="Удобные дата и время встречи с курьером в будущем, с часовым поясом, например 2026-10-25T14:30:00+03:00.",
+    )
+
+    @field_validator("courier_visit_at")
+    @classmethod
+    def validate_courier_visit_at(cls, value):
+        if value <= datetime.now(timezone.utc):
+            raise ValueError("Дата и время встречи с курьером должны быть в будущем")
+        return value.astimezone(timezone.utc)
+
+
+class ApplicationOriginShema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source: ApplicationSource
+    source_label: str
+    courier_visit_at: datetime | None
+    delivery_status: DeliveryStatus | None
+
+    @field_validator("courier_visit_at", mode="before")
+    @classmethod
+    def restore_utc_timezone(cls, value):
+        # SQLite убирает часовой пояс при чтении, значения сохраняются в UTC.
+        if isinstance(value, datetime) and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+
+class DeliveryUpdateShema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["courier_dispatched", "courier_picked_up", "arrived"] = Field(
+        description="Следующий этап из next_delivery_status. Менять доставку может только оператор, строго по порядку.",
+    )
 
 
 # Заявка в списке клиента: без внутренних подробностей ремонта, код нужен для проверки статуса
-class ClientApplicationShema(BaseModel):
+class ClientApplicationShema(ApplicationOriginShema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -132,7 +167,7 @@ class CheckShema(BaseModel):
         return self
 
 
-class ApplicationShema(ApplicationCreateShema):
+class ApplicationShema(ApplicationCreateShema, ApplicationOriginShema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -149,6 +184,8 @@ class ApplicationShema(ApplicationCreateShema):
     work_cost: float = 0
     total_cost: float = 0
     diagnostic_result: str | None = Field(default=None)
+    next_delivery_status: DeliveryStatus | None
+    next_delivery_action: str | None
 
 
 # Схема клиента для оператора, с id всех его заявок
