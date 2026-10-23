@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
-from src.api.services.services_admin import create_unique_access_code, dismissal_employee,hire_employee,release_application
+from src.api.services.services_admin import create_unique_access_code, dismissal_employee,hire_employee,release_application,reload_access_codes
 from src.databases.database import get_db, Base, engine
-from src.shemas import ApplicationShema, AccessCodeCreateSchema, AccessCodeResponseSchema
+from src.shemas import ApplicationShema, AccessCodeCreateSchema, AccessCodeResponseSchema, ReloadAccessCodeResponcrShema,ReloadAccessCodeCreateShema
 from src.api.services.services import get_all_applications, get_all_accesscode, get_all_parts
 from src.api.services.services_stock import get_stock, create_stock_part, update_stock_part
 from src.shemas import StockPartShema, StockPartCreateShema, StockPartUpdateShema, CleanStr
@@ -49,6 +49,12 @@ def generate_code_endpoint(data: AccessCodeCreateSchema,db: Session = Depends(ge
         role=db_entry.role,
         is_active=db_entry.is_active #AccessCodeResponseSchema
     )
+
+@router_admin.post('/reload-access-code',response_model=ReloadAccessCodeResponcrShema, summary='перевыпустить код достпуа')
+def reload_ac(data: ReloadAccessCodeCreateShema, db: Session = Depends(get_db)):
+    return reload_access_codes(db=db,data=data)
+
+
 
 #УВОЛЬНЕНИЕ
 @router_admin.patch('/{employee_id}/dismissal',summary='Увольнение работника, деактивация')

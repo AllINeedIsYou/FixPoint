@@ -5,6 +5,7 @@ from starlette import status
 from src.api.services.services import generate_access_code, hash_code
 from src.api.services.services_operator import get_application_for_update
 from src.models import AccessCode, Stage, STATUS_DIAGNOSED
+from src.shemas import ReloadAccessCodeCreateShema, ReloadAccessCodeResponcrShema
 
 
 #создание и проверка кода+сохранение
@@ -117,3 +118,26 @@ def release_application(application_id: int, db: Session):
     db.commit()
     db.refresh(application)
     return application
+
+def reload_access_codes(db: Session, data: ReloadAccessCodeCreateShema):
+    employee=db.query(AccessCode).filter(AccessCode.id==data.id).first()
+    if employee is None:
+        raise HTTPException(status_code=404,detail='работник не найден')
+    try:
+        new_code = generate_access_code()
+        hashed = hash_code(new_code)
+
+        employee.code_hash = hashed
+
+        response=ReloadAccessCodeResponcrShema(
+            FIO=employee.FIO,
+            Code=new_code
+        )
+
+        db.commit()
+
+    except IntegrityError:
+        db.rollback()
+        raise
+    db.refresh(employee)
+    return response

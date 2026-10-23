@@ -8,14 +8,14 @@ from src.shemas import ClientApplicationCreateShema
 from src.api.roles.operator import phone_operator
 
 # Поиск заявки по коду.
-def status_client(db: Session, application_code: str | None = None):
+def status_client(db: Session, client_id: int, application_code: str | None = None):
     if (application_code is None):
         raise HTTPException(status_code=422, detail="Введите код заявки")
     #код - 8 латинских букв и цифр, генерируется заглавными. остальное (в т.ч. \x00, который Postgres не принимает) - сразу 422
     application_code = application_code.strip().upper()
     if not re.fullmatch(r"[A-Z0-9]{8}", application_code):
         raise HTTPException(status_code=422, detail="Код заявки - 8 латинских букв и цифр")
-    code=db.query(Application).filter(Application.code == application_code).first()
+    code=db.query(Application).filter(Application.code == application_code, Application.client_id == client_id).first()
     if code is None:
         raise HTTPException(status_code=404,detail='Введен неверый код')
     if code is not None:

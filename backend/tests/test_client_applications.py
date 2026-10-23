@@ -58,7 +58,7 @@ def test_client_sees_only_own_applications_newest_first(client, staff, register,
     r = client.get("/client/applications")
     assert r.status_code == 200
     assert [a["code"] for a in r.json()] == [second["code"], first["code"]]
-    assert set(r.json()[0]) == {"code", "info", "device", "device_model", "created_at"}
+    assert set(r.json()[0]) == {"id", "code", "info", "device", "device_model", "created_at", "status", "status_info"}
 
     # заявки другого клиента не видны
     client.post("/auth/client/logout")

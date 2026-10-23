@@ -57,11 +57,14 @@ class ClientApplicationCreateShema(ApplicationDetailsShema):
 class ClientApplicationShema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    id: int
     code: str
     info: str
     device: str
     device_model: str
     created_at: datetime
+    status: str
+    status_info: int
 
 
 # Схема для запчасти на складе(админ добавляет), пробелы по краям названия обрезаются
@@ -194,6 +197,15 @@ class ClientCreateShema(BaseModel):
     email: EmailStr
     login: CleanStr = Field(min_length=3, max_length=40, pattern=r"^[a-zA-Z0-9_.-]+$")
     password: CleanStr = Field(min_length=8, max_length=128)
+    application_code: CleanStr | None = Field(
+        default=None, min_length=8, max_length=8, pattern=r"^[A-Z0-9]{8}$",
+        description="Код своей заявки от оператора. Обязателен, если клиент уже обращался без аккаунта.",
+    )
+
+    @field_validator("application_code", mode="before")
+    @classmethod
+    def normalize_application_code(cls, value):
+        return value.strip().upper() if isinstance(value, str) else value
 
     @field_validator("FIO", "login", mode="before")
     @classmethod
@@ -208,3 +220,12 @@ class ClientResponseShema(BaseModel):
     email: EmailStr
     login: str
     created_at: datetime
+
+class ReloadAccessCodeCreateShema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id:int
+
+class ReloadAccessCodeResponcrShema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    FIO:str
+    Code:str

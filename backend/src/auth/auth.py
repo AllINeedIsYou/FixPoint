@@ -12,7 +12,7 @@ from psycopg2.errors import UniqueViolation
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from src.databases.database import get_db, settings
-from src.models import AccessCode,Client,ClientSessions
+from src.models import AccessCode,Client,ClientSessions,Application
 from src.shemas import TokenResponseSchema,ClientCreateShema,ClientLoginSchema,ClientResponseShema
 from fastapi.security import OAuth2PasswordBearer
 
@@ -156,15 +156,43 @@ def validate_client_data(schema, data):
 
 
 def register_client(db, client_data):
-    now=datetime.now(timezone.utc)
-
-    dump_client=client_data.model_dump(exclude={"password"})
-    dump_client["created_at"]=now
-
-    new_client=Client(**dump_client,password_hash=hash_password(client_data.password))
+    # Оператор и сайт используют одну запись клиента с уникальным телефоном.
+    # Код заявки подтверждает доступ к ранее созданной оператором истории.
+    existing = db.query(Client).filter(Client.number == str(client_data.number)).with_for_update().first()
+    if existing is not None:
+        if existing.login is not None or existing.password_hash is not None:
+            raise HTTPException(status_code=409, detail="Для этого телефона уже есть аккаунт. Войдите в него.")
+        if not client_data.application_code:
+            raise HTTPException(status_code=409, detail="Клиент уже обращался в сервис. Для регистрации укажите код своей заявки от оператора.")
+        same_person = (
+            existing.FIO.strip().casefold() == client_data.FIO.strip().casefold()
+            and existing.email.strip().casefold() == str(client_data.email).strip().casefold()
+        )
+        own_application = db.query(Application.id).filter(
+            Application.client_id == existing.id,
+            Application.code == client_data.application_code,
+        ).first()
+        if not same_person or own_application is None:
+            raise HTTPException(status_code=403, detail="Данные клиента или код заявки не совпадают. Уточните их у оператора.")
+        new_client = existing
+    else:
+        if client_data.application_code is not None:
+            raise HTTPException(status_code=403, detail="Данные клиента или код заявки не совпадают. Уточните их у оператора.")
+        dump_client = client_data.model_dump(exclude={"password", "application_code"})
+        new_client = Client(**dump_client, password_hash=hash_password(client_data.password))
 
     try:
-        db.add(new_client)
+        if existing is None:
+            db.add(new_client)
+        else:
+            # Условное обновление защищает от двух одновременных активаций:
+            # второй запрос не должен заменить уже установленный пароль.
+            updated = db.query(Client).filter(
+                Client.id == existing.id, Client.login.is_(None), Client.password_hash.is_(None),
+            ).update({Client.login: client_data.login, Client.password_hash: hash_password(client_data.password)})
+            if updated != 1:
+                db.rollback()
+                raise HTTPException(status_code=409, detail="Для этого телефона уже есть аккаунт. Войдите в него.")
         db.commit()
 
     except IntegrityError as error:
