@@ -6,6 +6,7 @@ from src.api.services.services import build_application
 from src.models import Application, Client
 from src.shemas import ClientApplicationCreateShema
 from src.api.roles.operator import phone_operator
+from src.application_flow import ApplicationSource
 
 # Поиск заявки по коду.
 def status_client(db: Session, client_id: int, application_code: str | None = None):
@@ -25,7 +26,7 @@ def status_client(db: Session, client_id: int, application_code: str | None = No
 
 #клиент сам создает заявку: ФИО, телефон и email берутся из его аккаунта
 def create_client_application(client: Client, data: ClientApplicationCreateShema, db: Session, retry: bool = True) -> Application:
-    application = build_application(client, data)
+    application = build_application(client, data, source=ApplicationSource.ONLINE)
     db.add(application)
     try:
         db.commit()

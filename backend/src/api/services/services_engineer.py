@@ -22,7 +22,8 @@ def perform_diagnostics(aplication_id:int, employee_id: int, diagnostic_info: st
     elif application.status_info != Stage.CREATED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Невозможно выполнить диагностику: заявка с id={aplication_id} уже прошла этап диагностики",
+            detail=("Дождитесь прибытия техники в ремонтный центр" if application.status_info < Stage.CREATED
+                    else f"Невозможно выполнить диагностику: заявка с id={aplication_id} уже прошла этап диагностики"),
         )
     if application.assignee_engineer_id is None:
         raise HTTPException(
@@ -59,7 +60,8 @@ def take_engineer_application(application_id: int, employee_id: int, db: Session
     if application.status_info not in (Stage.CREATED, Stage.REPAIRED):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Заявка с id={application_id} сейчас не ждет ни диагностики, ни проверки'
+            detail=('Дождитесь прибытия техники в ремонтный центр' if application.status_info < Stage.CREATED
+                    else f'Заявка с id={application_id} сейчас не ждет ни диагностики, ни проверки')
         )
 
     application.assignee_engineer_id = employee_id

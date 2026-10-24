@@ -3,13 +3,18 @@ from enum import IntEnum
 from sqlalchemy import String, Text, Integer, Numeric, ForeignKey, Index, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.databases.database import Base
+from src.application_flow import ApplicationSource, DeliveryStatus
 
-#фиксированная стоимость работы мастера, добавляется к стоимости запчастей
+#Фиксированная стоимость работы по источнику заявки, запчасти добавляются отдельно.
 WORK_COST = 5000
+ONLINE_WORK_COST = 6000
 
 
 #этапы заявки (поле status_info), в БД хранится число
 class Stage(IntEnum):
+    ONLINE_CREATED = -3       #онлайн-заявка, курьер еще не выехал
+    COURIER_DISPATCHED = -2   #курьер выехал к клиенту
+    COURIER_PICKED_UP = -1    #техника у курьера, едет в центр
     CREATED = 0     #заявка создана, ждет диагностики
     DIAGNOSED = 1   #диагностика завершена, ждет ремонта
     REPAIRED = 2    #ремонт завершен, ждет проверки инженером
@@ -20,6 +25,10 @@ class Stage(IntEnum):
 
 #тексты статусов (поле status), их видит клиент
 STATUS_CREATED = 'Заявка создана. Ожидание диагностики'
+STATUS_ONLINE_CREATED = 'Заявка создана'
+STATUS_COURIER_DISPATCHED = 'Курьер выехал'
+STATUS_COURIER_PICKED_UP = 'Курьер забрал посылку'
+STATUS_ARRIVED = 'Посылка прибыла в ремонтный центр'
 STATUS_DIAGNOSTICS_TAKEN = 'Заявка взята в диагностику. Ожидается выполнение...'
 STATUS_DIAGNOSED = 'Диагностика завершена. Ожидание выполнения работы...'
 STATUS_REPAIR_TAKEN = 'Заявка взята в работу. Ожидается выполнение...'
@@ -85,6 +94,10 @@ class Application(Base):
     #адрес клиента по этой заявке (при регистрации адрес не спрашивается, и у разных заявок он может отличаться)
     address: Mapped[str] = mapped_column(Text,nullable=False)
 
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default=ApplicationSource.OFFLINE.value)
+
+    courier_visit_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     status_info: Mapped[int]=mapped_column(Integer,default=Stage.CREATED)
@@ -110,6 +123,36 @@ class Application(Base):
     def waiting_diagnostics_status(self) -> str:
         return STATUS_CHECK_FAILED if self.check_result else STATUS_CREATED
 
+    @property
+    def source_label(self) -> str:
+        return {"online": "Онлайн", "offline": "Офлайн", "unknown": "Не указан"}[self.source]
+
+    @property
+    def delivery_status(self) -> DeliveryStatus | None:
+        if self.source != ApplicationSource.ONLINE:
+            return None
+        return {
+            Stage.ONLINE_CREATED: DeliveryStatus.CREATED,
+            Stage.COURIER_DISPATCHED: DeliveryStatus.COURIER_DISPATCHED,
+            Stage.COURIER_PICKED_UP: DeliveryStatus.COURIER_PICKED_UP,
+        }.get(self.status_info, DeliveryStatus.ARRIVED)
+
+    @property
+    def next_delivery_status(self) -> DeliveryStatus | None:
+        return {
+            DeliveryStatus.CREATED: DeliveryStatus.COURIER_DISPATCHED,
+            DeliveryStatus.COURIER_DISPATCHED: DeliveryStatus.COURIER_PICKED_UP,
+            DeliveryStatus.COURIER_PICKED_UP: DeliveryStatus.ARRIVED,
+        }.get(self.delivery_status)
+
+    @property
+    def next_delivery_action(self) -> str | None:
+        return {
+            DeliveryStatus.COURIER_DISPATCHED: "Курьер выехал",
+            DeliveryStatus.COURIER_PICKED_UP: "Подтвердить получение посылки курьером",
+            DeliveryStatus.ARRIVED: "Подтвердить прибытие в ремонтный центр",
+        }.get(self.next_delivery_status)
+
     #данные клиента в ответах API остаются полями заявки, как было до таблицы клиентов
     @property
     def FIO(self) -> str:
@@ -130,7 +173,7 @@ class Application(Base):
 
     @property
     def work_cost(self) -> int:
-        return WORK_COST
+        return ONLINE_WORK_COST if self.source == ApplicationSource.ONLINE else WORK_COST
 
     #итоговая стоимость: запчасти + работа
     @property
