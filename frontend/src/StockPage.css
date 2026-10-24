@@ -1,0 +1,263 @@
+
+.stock-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.stock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.stock-description {
+  color: #64748b;
+  margin-top: 8px;
+}
+
+.stock-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stock-summary-card,
+.stock-form,
+.stock-part-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.stock-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stock-summary-card span,
+.stock-part-quantity span,
+.stock-part-price span {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.stock-summary-card strong {
+  color: #1e293b;
+  font-size: 28px;
+}
+
+.stock-primary-button,
+.stock-secondary-button {
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 16px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.stock-primary-button {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.stock-primary-button:hover {
+  background: #1d4ed8;
+}
+
+.stock-secondary-button {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.stock-secondary-button:hover {
+  background: #dbeafe;
+}
+
+.stock-primary-button:disabled,
+.stock-secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stock-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.stock-form h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.stock-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stock-form input,
+.stock-toolbar input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 12px;
+  background: #ffffff;
+  color: #1e293b;
+  font: inherit;
+  outline: none;
+}
+
+.stock-form input:focus,
+.stock-toolbar input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.stock-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stock-form-actions,
+.stock-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stock-toolbar input {
+  flex: 1;
+}
+
+.stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stock-part-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.stock-part-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.stock-part-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stock-part-info h3 {
+  margin: 0;
+  color: #1e293b;
+  overflow-wrap: anywhere;
+}
+
+.stock-part-info span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.stock-part-quantity,
+.stock-part-price {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 100px;
+}
+
+.stock-part-quantity strong,
+.stock-part-price strong {
+  color: #1e293b;
+}
+
+.stock-part-quantity .out-of-stock {
+  color: #dc2626;
+}
+
+.stock-empty,
+.stock-notice,
+.stock-error {
+  padding: 16px;
+  border-radius: 10px;
+}
+
+.stock-empty {
+  background: #f8fafc;
+  color: #64748b;
+  text-align: center;
+}
+
+.stock-notice {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.stock-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+@media (max-width: 800px) {
+  .stock-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .stock-part-card {
+    flex-wrap: wrap;
+  }
+
+  .stock-part-info {
+    flex-basis: calc(100% - 70px);
+  }
+
+  .stock-part-quantity,
+  .stock-part-price {
+    flex: 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .stock-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

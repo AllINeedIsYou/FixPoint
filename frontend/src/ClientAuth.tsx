@@ -1,14 +1,14 @@
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+import { apiRequest } from './api'
 import './ClientAuth.css'
 
-// Данные клиента для демонстрационного режима
 export type ClientAccount = {
   id: number
   name: string
   phone: string
   email: string
-  password: string
+  login: string
 }
 
 type ClientAuthProps = {
@@ -18,75 +18,105 @@ type ClientAuthProps = {
   onRegister: (client: ClientAccount) => void
 }
 
+type ClientApiResponse = {
+  id: number
+  FIO: string
+  number: string
+  email: string
+  login: string
+  created_at: string
+}
+
 export default function ClientAuth({
   onSuccess,
   onBack,
-  accounts,
   onRegister,
 }: ClientAuthProps) {
   const [mode, setMode] = useState<'login' | 'register'>('register')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
+  const [applicationCode, setApplicationCode] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  function convertClient(data: ClientApiResponse): ClientAccount {
+    return {
+      id: data.id,
+      name: data.FIO,
+      phone: data.number,
+      email: data.email,
+      login: data.login,
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    setLoading(true)
 
-    if (mode === 'register') {
-      if (!name.trim() || !phone.trim() || !email.trim() || !password) {
-        setError('Заполни все поля')
-        return
-      }
+    try {
+      if (mode === 'register') {
+        const body = {
+          FIO: name.trim(),
+          number: phone.trim(),
+          email: email.trim().toLowerCase(),
+          login: login.trim(),
+          password,
+          ...(applicationCode.trim()
+            ? { application_code: applicationCode.trim().toUpperCase() }
+            : {}),
+        }
 
-      if (!/^\S+@\S+\.\S+$/.test(email)) {
-        setError('Проверь адрес электронной почты')
-        return
-      }
-
-      if (password.length < 6) {
-        setError('Пароль должен содержать не менее 6 символов')
-        return
-      }
-
-      const normalizedEmail = email.trim().toLowerCase()
-
-      if (
-        accounts.some(
-          client => client.email.toLowerCase() === normalizedEmail
+        await apiRequest<ClientApiResponse>(
+          '/auth/client/register',
+          {
+            method: 'POST',
+            body,
+          }
         )
-      ) {
-        setError('Аккаунт с такой почтой уже существует')
+
+        // Регистрация создаёт аккаунт. Затем клиент входит в него.
+        const loginData = await apiRequest<ClientApiResponse>(
+          '/auth/client/login',
+          {
+            method: 'POST',
+            body: {
+              username: body.login,
+              password,
+            },
+          }
+        )
+
+        const client = convertClient(loginData)
+        onRegister(client)
+        onSuccess(client)
         return
       }
 
-      const client: ClientAccount = {
-        id: Math.max(0, ...accounts.map(item => item.id)) + 1,
-        name: name.trim(),
-        phone: phone.trim(),
-        email: normalizedEmail,
-        password,
-      }
+      const data = await apiRequest<ClientApiResponse>(
+        '/auth/client/login',
+        {
+          method: 'POST',
+          body: {
+            username: login.trim(),
+            password,
+          },
+        }
+      )
 
-      onRegister(client)
-      onSuccess(client)
-      return
+      onSuccess(convertClient(data))
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Не удалось выполнить запрос. Проверь соединение с сервером.'
+      )
+    } finally {
+      setLoading(false)
     }
-
-    const client = accounts.find(
-      item =>
-        item.email.toLowerCase() === email.trim().toLowerCase() &&
-        item.password === password
-    )
-
-    if (!client) {
-      setError('Неверная почта или пароль')
-      return
-    }
-
-    onSuccess(client)
   }
 
   return (
@@ -147,12 +177,12 @@ export default function ClientAuth({
         <form onSubmit={handleSubmit}>
           {mode === 'register' && (
             <>
-              <label htmlFor="client-name">Имя и фамилия</label>
+              <label htmlFor="client-name">ФИО</label>
               <input
                 id="client-name"
                 value={name}
-                onChange={event => setName(event.target.value)}
-                placeholder="Как к вам обращаться"
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Имя и фамилия"
                 autoComplete="name"
                 required
               />
@@ -162,44 +192,93 @@ export default function ClientAuth({
                 id="client-phone"
                 type="tel"
                 value={phone}
-                onChange={event => setPhone(event.target.value)}
+                onChange={(event) => setPhone(event.target.value)}
                 placeholder="+7 900 000-00-00"
                 autoComplete="tel"
                 required
               />
+
+              <label htmlFor="client-email">Электронная почта</label>
+              <input
+                id="client-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@example.com"
+                autoComplete="email"
+                required
+              />
+
+              <label htmlFor="client-login">Придумай логин</label>
+              <input
+                id="client-login"
+                value={login}
+                onChange={(event) => setLogin(event.target.value)}
+                placeholder="Латинские буквы, цифры, _ . -"
+                autoComplete="username"
+                minLength={3}
+                maxLength={40}
+                pattern="[a-zA-Z0-9_.-]+"
+                required
+              />
+
+              <label htmlFor="client-code">
+                Код прежней заявки (необязательно)
+              </label>
+              <input
+                id="client-code"
+                value={applicationCode}
+                onChange={(event) => setApplicationCode(event.target.value)}
+                placeholder="8 латинских букв или цифр"
+                minLength={8}
+                maxLength={8}
+                autoComplete="off"
+              />
             </>
           )}
 
-          <label htmlFor="client-email">Электронная почта</label>
-          <input
-            id="client-email"
-            type="email"
-            value={email}
-            onChange={event => setEmail(event.target.value)}
-            placeholder="name@example.com"
-            autoComplete="email"
-            required
-          />
+          {mode === 'login' && (
+            <>
+              <label htmlFor="client-login">Логин</label>
+              <input
+                id="client-login"
+                value={login}
+                onChange={(event) => setLogin(event.target.value)}
+                placeholder="Твой логин"
+                autoComplete="username"
+                required
+              />
+            </>
+          )}
 
           <label htmlFor="client-password">Пароль</label>
           <input
             id="client-password"
             type="password"
             value={password}
-            onChange={event => setPassword(event.target.value)}
-            placeholder="Не менее 6 символов"
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Не менее 8 символов"
             autoComplete={
               mode === 'register' ? 'new-password' : 'current-password'
             }
-            minLength={6}
+            minLength={mode === 'register' ? 8 : 1}
+            maxLength={128}
             required
           />
 
           {error && <p className="client-auth-error">{error}</p>}
 
-          <button className="client-auth-submit" type="submit">
-            {mode === 'register' ? 'Зарегистрироваться' : 'Войти в аккаунт'}
-            <span>↗</span>
+          <button
+            className="client-auth-submit"
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? 'Подожди...'
+              : mode === 'register'
+                ? 'Зарегистрироваться'
+                : 'Войти в аккаунт'}
+            {!loading && <span>↗</span>}
           </button>
         </form>
 
