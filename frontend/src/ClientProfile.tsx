@@ -1,52 +1,109 @@
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import type { ClientAccount } from './ClientAuth'
+import { apiRequest } from './api'
 import './ClientProfile.css'
 
 type ClientApplication = {
   id: number
-  client: string
-  clientId?: number
+  code: string
+  info: string
   device: string
+  device_model: string
+  created_at: string
   status: string
-  description?: string
+  status_info: number
 }
 
 type ClientProfileProps = {
   client: ClientAccount
-  applications: ClientApplication[]
-  onCreateApplication: (device: string, description: string) => void
   onLogout: () => void
 }
 
 export default function ClientProfile({
   client,
-  applications,
-  onCreateApplication,
   onLogout,
 }: ClientProfileProps) {
+  const [applications, setApplications] = useState<ClientApplication[]>([])
   const [showForm, setShowForm] = useState(false)
   const [device, setDevice] = useState('')
+  const [deviceModel, setDeviceModel] = useState('')
   const [description, setDescription] = useState('')
+  const [address, setAddress] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [successCode, setSuccessCode] = useState('')
 
-  const myApplications = applications.filter(
-    (application) => application.clientId === client.id
-  )
+  const loadApplications = useCallback(async () => {
+    try {
+      const data = await apiRequest<ClientApplication[]>(
+        '/client/applications'
+      )
+      setApplications(data)
+      setError('')
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Не удалось загрузить заявки.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    void loadApplications()
+  }, [loadApplications])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setError('')
+    setSuccessCode('')
 
-    if (!device.trim() || !description.trim()) {
-      setError('Заполни оба поля, чтобы оформить заявку.')
+    if (
+      !device.trim() ||
+      !deviceModel.trim() ||
+      !description.trim() ||
+      !address.trim()
+    ) {
+      setError('Заполни все поля заявки.')
       return
     }
 
-    onCreateApplication(device.trim(), description.trim())
-    setDevice('')
-    setDescription('')
-    setError('')
-    setShowForm(false)
+    setSubmitting(true)
+
+    try {
+      const created = await apiRequest<ClientApplication>(
+        '/client/applications',
+        {
+          method: 'POST',
+          body: {
+            device: device.trim(),
+            device_model: deviceModel.trim(),
+            info: description.trim(),
+            address: address.trim(),
+          },
+        }
+      )
+
+      setApplications((previous) => [created, ...previous])
+      setSuccessCode(created.code)
+      setDevice('')
+      setDeviceModel('')
+      setDescription('')
+      setAddress('')
+      setShowForm(false)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Не удалось создать заявку.'
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -75,11 +132,9 @@ export default function ClientProfile({
             <div className="client-profile-eyebrow">
               ЛИЧНЫЙ КАБИНЕТ КЛИЕНТА
             </div>
-            <h1>
-              Привет, {client.name.split(' ')[0]}!
-            </h1>
+            <h1>Привет, {client.name.split(' ')[0]}!</h1>
             <p>
-              Здесь ты можешь оформить заявку и следить за ремонтом своей техники.
+              Оформляй заявки и следи за ремонтом своей техники.
             </p>
           </div>
 
@@ -106,7 +161,9 @@ export default function ClientProfile({
         <section className="client-applications-section">
           <div className="client-section-heading">
             <div>
-              <div className="client-profile-eyebrow">ИСТОРИЯ ОБРАЩЕНИЙ</div>
+              <div className="client-profile-eyebrow">
+                ИСТОРИЯ ОБРАЩЕНИЙ
+              </div>
               <h2>Мои заявки</h2>
             </div>
 
@@ -114,49 +171,122 @@ export default function ClientProfile({
               className="client-create-button"
               type="button"
               onClick={() => {
-                setShowForm(!showForm)
+                setShowForm((value) => !value)
                 setError('')
+                setSuccessCode('')
               }}
             >
               {showForm ? 'Отмена' : '+ Новая заявка'}
             </button>
           </div>
 
-          {showForm && (
-            <form className="client-application-form" onSubmit={handleSubmit}>
-              <h3>Расскажи о своей технике</h3>
+          {successCode && (
+            <div className="client-success-message">
+              <strong>Заявка создана!</strong>
+              <p>
+                Сохрани код заявки — он понадобится для обращения в сервис.
+              </p>
+              <div className="client-code-row">
+                <code>{successCode}</code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(successCode)
+                  }}
+                >
+                  Копировать код
+                </button>
+              </div>
+            </div>
+          )}
 
-              <label htmlFor="client-device">Устройство</label>
+          {showForm && (
+            <form
+              className="client-application-form"
+              onSubmit={handleSubmit}
+            >
+              <h3>Информация об устройстве</h3>
+
+              <label htmlFor="client-device">Тип устройства</label>
               <input
                 id="client-device"
                 value={device}
                 onChange={(event) => setDevice(event.target.value)}
-                placeholder="Например, ноутбук ASUS"
+                placeholder="Например, ноутбук"
+                maxLength={1000}
+                required
               />
 
-              <label htmlFor="client-description">Что случилось?</label>
+              <label htmlFor="client-model">Модель устройства</label>
+              <input
+                id="client-model"
+                value={deviceModel}
+                onChange={(event) => setDeviceModel(event.target.value)}
+                placeholder="Например, ASUS VivoBook 15"
+                maxLength={1000}
+                required
+              />
+
+              <label htmlFor="client-description">
+                Описание неисправности
+              </label>
               <textarea
                 id="client-description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Опиши неисправность"
+                placeholder="Что произошло с устройством?"
                 rows={4}
+                maxLength={1000}
+                required
+              />
+
+              <label htmlFor="client-address">Адрес</label>
+              <input
+                id="client-address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder="Адрес для оформления заявки"
+                maxLength={1000}
+                required
               />
 
               {error && <p className="client-form-error">{error}</p>}
 
-              <button className="client-create-button" type="submit">
-                Отправить заявку
+              <button
+                className="client-create-button"
+                type="submit"
+                disabled={submitting}
+              >
+                {submitting ? 'Отправка...' : 'Отправить заявку'}
               </button>
             </form>
           )}
 
-          {myApplications.length === 0 ? (
+          {error && !showForm && (
+            <div className="client-form-error">
+              {error}
+              <button
+                type="button"
+                onClick={() => {
+                  setLoading(true)
+                  void loadApplications()
+                }}
+              >
+                Повторить
+              </button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="client-empty-state">
+              Загружаем заявки...
+            </div>
+          ) : applications.length === 0 ? (
             <div className="client-empty-state">
               <div className="client-empty-icon">＋</div>
               <h3>Пока нет заявок</h3>
               <p>
-                Когда понадобится помощь с техникой, создай первую заявку здесь.
+                Создай первую заявку, чтобы начать работу с сервисным центром.
               </p>
               {!showForm && (
                 <button
@@ -170,7 +300,7 @@ export default function ClientProfile({
             </div>
           ) : (
             <div className="client-application-list">
-              {myApplications.map((application) => (
+              {applications.map((application) => (
                 <article
                   className="client-application-card"
                   key={application.id}
@@ -181,8 +311,16 @@ export default function ClientProfile({
                       {application.status}
                     </span>
                   </div>
-                  <h3>{application.device}</h3>
-                  {application.description && <p>{application.description}</p>}
+
+                  <h3>{application.device} — {application.device_model}</h3>
+                  <p>{application.info}</p>
+
+                  <div className="client-application-meta">
+                    <span>
+                      Создана: {new Date(application.created_at).toLocaleString('ru-RU')}
+                    </span>
+                    <span>Код: {application.code}</span>
+                  </div>
                 </article>
               ))}
             </div>

@@ -1,9 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  users,
-  applications,
   clients,
-  stockParts
+  stockParts,
 } from './mockData'
 
 import type { UsedPart } from './RepairPartsPanel'
@@ -12,19 +10,21 @@ import HomePage from './HomePage'
 //боковая менюшка
 import Sidebar from './Sidebar'
 //сотрудники для адм
-import EmployeesPage from './pages/EmployeesPage'
+import EmployeesPage, { type Employee } from './pages/EmployeesPage'
 //работа с заявками
 import ApplicationDetails from './ApplicationDetails'
 //регистрация клиентуса
 import ClientAuth, { type ClientAccount } from './ClientAuth'
 //профиль клиента
 import ClientProfile from './ClientProfile'
-
-
+//импорт апи
+import { apiRequest } from './api'
+//Эт склад
+import StockPage from './StockPage'
 
 function App() {
   // =========================
-  // СОСТОЯНИЯ и хуня для работы выше
+  // СОСТОЯНИЯ и все для работы выше
   // =========================
 
   const [showLogin, setShowLogin] = useState(false)
@@ -33,6 +33,28 @@ function App() {
   const [accessCode, setAccessCode] = useState('')
 
   const [error, setError] = useState('')
+
+  // JWT-токен сотрудника, полученный от бэкенда
+  const [employeeToken, setEmployeeToken] = useState('')
+
+  // Восстанавливаем сессию сотрудника после перезагрузки страницы
+  useEffect(() => {
+    const savedToken = localStorage.getItem('fixpoint_employee_token')
+    const savedRole = localStorage.getItem('fixpoint_employee_role')
+
+    if (savedToken && savedRole) {
+      setEmployeeToken(savedToken)
+      setCurrentUser({
+        role: savedRole,
+        name: savedRole,
+      })
+    }
+  }, [])
+
+  // Настоящий список сотрудников с бэкенда
+  const [employeeList, setEmployeeList] = useState<Employee[]>([])
+  const [employeesLoading, setEmployeesLoading] = useState(false)
+  const [employeesError, setEmployeesError] = useState('')
 
   const [currentUser, setCurrentUser] = useState<{
     role: string
@@ -44,7 +66,9 @@ function App() {
     useState<number | null>(null)
 
   // Какая страница открыта
-  const [activePage, setActivePage] = useState('home')
+  const [activePage, setActivePage] = useState(
+    () => localStorage.getItem('fixpoint_employee_page') || 'home'
+  )
 
   // Временные статусы заявок
   // Потом это заменю на данные с backend
@@ -55,22 +79,21 @@ function App() {
   const [applicationDiagnoses, setApplicationDiagnoses] =
     useState<Record<number, string>>({})
 
-  //эт локальный список пока без бд. чтобы новые заявки добавлялись в
-  //  интерфейс, а не терялись из-за использования исходного массива.
-  const [applicationList, setApplicationList] = useState<
-    {
-      id: number
-      client: string
-      clientId?: number
-      device: string
-      status: string
-      description?: string
-    }[]
-  >(applications)
+  //реальные заявки, загружаемые с бэкенда
+  type ApplicationItem = {
+    id: number
+    client: string
+    clientId?: number
+    device: string
+    status: string
+    description?: string
+    diagnosticResult?: string
+  }
 
-  //список сотрудников пока в памяти приложения
-  const [employeeList, setEmployeeList] = useState(users)
-  
+  const [applicationList, setApplicationList] = useState<ApplicationItem[]>([])
+  const [applicationsLoading, setApplicationsLoading] = useState(false)
+  const [applicationsError, setApplicationsError] = useState('')
+
   //локальные копии моковых данных которые можно изменять
   const [clientList, setClientList] = useState(clients)
   const [stock, setStock] = useState(stockParts)
@@ -82,6 +105,45 @@ function App() {
   // --- Авторизация клиентов ---
   const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>([])
   const [currentClient, setCurrentClient] = useState<ClientAccount | null>(null)
+
+  // Восстанавливаем сессию клиента после перезагрузки страницы.
+  useEffect(() => {
+    let cancelled = false
+
+    async function restoreClientSession() {
+      try {
+        const data = await apiRequest<{
+          id: number
+          FIO: string
+          number: string
+          email: string
+          login: string
+        }>('/auth/client/me')
+
+        if (cancelled) return
+
+        setCurrentClient({
+          id: data.id,
+          name: data.FIO,
+          phone: data.number,
+          email: data.email,
+          login: data.login,
+        })
+      } catch {
+        // Нет активной сессии — оставляем пользователя на главной.
+        if (!cancelled) {
+          setCurrentClient(null)
+        }
+      }
+    }
+
+    void restoreClientSession()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const [showClientAuth, setShowClientAuth] = useState(false)
 
   //поля создания заявок оператором
@@ -93,31 +155,6 @@ function App() {
   const [newPartName, setNewPartName] = useState('')
   const [newPartQuantity, setNewPartQuantity] = useState('1')
   const [newPartPrice, setNewPartPrice] = useState('')
-
-  //обработчик создает заявку и связывает ее с акком клиентуса
-  function handleCreateClientApplication(
-    device: string,
-    description: string
-  ) {
-    if (!currentClient) return
-
-    const nextId =
-      applicationList.length > 0
-        ? Math.max(...applicationList.map((application) => application.id)) + 1
-        : 1
-
-    setApplicationList((prev) => [
-      ...prev,
-      {
-        id: nextId,
-        client: currentClient.name,
-        clientId: currentClient.id,
-        device,
-        description,
-        status: 'Новая',
-      },
-    ])
-  }
 
   // Запчасти: здесь оставлен один комплект обработчиков, без дублирующих объявлений.
   // Добавить одну единицу запчасти в заявку
@@ -210,7 +247,6 @@ function App() {
     })
   }
 
-
   // =========================
   // ВХОД
   // =========================
@@ -263,36 +299,114 @@ function App() {
   }
 
 
-  const handleLogin = () => {
-    const user = employeeList.find(
-      (user) =>
-        user.password === accessCode.trim() &&
-        user.active === true
-    )
+  // =========================
+  // ЗАГРУЗКА ЗАЯВОК С BACKEND
+  // =========================
 
-    if (user) {
-      setCurrentUser({
-        role: user.role,
-        name: user.name,
-      })
+  // Преобразуем статус сервера в статус, который понимает интерфейс
+  function normalizeApplicationStatus(status: string): string {
+    const value = status.toLowerCase()
 
-      setError('')
-      setAccessCode('')
-      setActivePage('home')
-      setSelectedApplication(null)
-      setShowLogin(false)
-    } else {
-      setError('Неверный код доступа')
+    if (value.includes('создана') || value.includes('ожидание диагностики')) {
+      return 'Новая'
     }
-    //setError('Проверка кода пока не подключена к серверу')
+
+    if (value.includes('диагностик')) {
+      return 'Диагностика'
+    }
+
+    if (value.includes('ожидание ремонта')) {
+      return 'Ожидание ремонта'
+    }
+
+    if (value.includes('ремонт')) {
+      return 'В ремонте'
+    }
+
+    if (value.includes('готов')) {
+      return 'Готово'
+    }
+
+    return status
   }
 
+  async function loadApplications() {
+    if (!employeeToken) return
+
+    setApplicationsLoading(true)
+    setApplicationsError('')
+
+    try {
+      const data = await apiRequest<
+        {
+          id: number
+          client_id: number
+          FIO: string
+          device: string
+          device_model?: string | null
+          info?: string | null
+          status: string
+          diagnostic_result?: string | null
+        }[]
+      >('/services/get_applications', {
+        token: employeeToken,
+      })
+
+      setApplicationList(
+        data.map((item) => ({
+          id: item.id,
+          client: item.FIO,
+          clientId: item.client_id,
+          device: [item.device, item.device_model]
+            .filter(Boolean)
+            .join(' — '),
+          status: normalizeApplicationStatus(item.status),
+          description: item.info ?? '',
+          diagnosticResult: item.diagnostic_result ?? '',
+        }))
+      )
+
+      // Обновляем список клиентов по данным заявок
+      const uniqueClients = new Map<
+        number,
+        { id: number; name: string; phone: string }
+      >()
+
+      // Телефоны можно будет добавить отдельно, когда подключим
+      // полноценную загрузку клиентов из API.
+      data.forEach((item) => {
+        if (!uniqueClients.has(item.client_id)) {
+          uniqueClients.set(item.client_id, {
+            id: item.client_id,
+            name: item.FIO,
+            phone: 'Не указан',
+          })
+        }
+      })
+
+      setClientList(Array.from(uniqueClients.values()))
+    } catch (err) {
+      setApplicationsError(
+        err instanceof Error
+          ? err.message
+          : 'Не удалось загрузить заявки'
+      )
+    } finally {
+      setApplicationsLoading(false)
+    }
+  }
+
+  // Загружаем реальные заявки после авторизации сотрудника
+  useEffect(() => {
+    if (employeeToken) {
+      void loadApplications()
+    }
+  }, [employeeToken])
 
   // =========================
-  // кнопка выход из акка сотрудника
+  // ВХОД СОТРУДНИКА ЧЕРЕЗ BACKEND
   // =========================
 
-  
   const getRoleName = (role: string) => {
     const roleNames: Record<string, string> = {
       engineer: 'Инженер',
@@ -305,9 +419,163 @@ function App() {
     return roleNames[role] ?? role
   }
 
+  const handleLogin = async () => {
+    if (!accessCode.trim()) {
+      setError('Введи код доступа')
+      return
+    }
+
+    setError('')
+
+    try {
+      // Бэкенд использует OAuth2PasswordRequestForm:
+      // код передаём в username, пароль оставляем пустым.
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+        },
+        body: new URLSearchParams({
+          username: accessCode.trim(),
+          password: '',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data.detail === 'string'
+            ? data.detail
+            : 'Не удалось войти. Проверь код доступа.'
+        )
+      }
+
+      // Сохраняем токен и роль сотрудника после успешного входа
+      localStorage.setItem('fixpoint_employee_token', data.access_token)
+      localStorage.setItem('fixpoint_employee_role', data.role)
+
+      setEmployeeToken(data.access_token)
+      setCurrentUser({
+        role: data.role,
+        name: getRoleName(data.role),
+      })
+
+      setAccessCode('')
+      setActivePage('home')
+      setSelectedApplication(null)
+      setShowLogin(false)
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Ошибка авторизации'
+      )
+    }
+  }
+
+  // ===================
+  // УПРАВЛЕНИЕ СОТРУДНИКАМИ ЧЕРЕЗ API
+  // ==========================
+
+  // Получить список сотрудников с сервера
+  async function loadEmployees() {
+    if (!employeeToken) return
+
+    setEmployeesLoading(true)
+    setEmployeesError('')
+
+    try {
+      const data = await apiRequest<
+        {
+          id: number
+          FIO: string
+          role: string
+          is_active: boolean
+        }[]
+      >('/services/get_accesscode', {
+        token: employeeToken,
+      })
+
+      setEmployeeList(
+        data.map((item) => ({
+          id: item.id,
+          name: item.FIO,
+          role: item.role,
+          active: item.is_active,
+        }))
+      )
+    } catch (err) {
+      setEmployeesError(
+        err instanceof Error
+          ? err.message
+          : 'Не удалось загрузить сотрудников'
+      )
+    } finally {
+      setEmployeesLoading(false)
+    }
+  }
+
+  // Блокировка или повторная активация сотрудника
+  async function handleToggleEmployeeActive(id: number) {
+    const employee = employeeList.find((item) => item.id === id)
+
+    if (!employee) {
+      throw new Error('Сотрудник не найден')
+    }
+
+    const action = employee.active ? 'dismissal' : 'hier'
+
+    await apiRequest(`/services/${id}/${action}`, {
+      method: 'PATCH',
+      token: employeeToken,
+    })
+
+    await loadEmployees()
+  }
+
+  // Перевыпустить код доступа сотрудника
+  async function handleGenerateEmployeeCode(id: number): Promise<string> {
+    const result = await apiRequest<{
+      FIO: string
+      Code: string
+    }>('/services/reload-access-code', {
+      method: 'POST',
+      body: { id },
+      token: employeeToken,
+    })
+
+    return result.Code
+  }
+
+  // Загружаем сотрудников, когда администратор открывает их страницу
+  useEffect(() => {
+    if (
+      currentUser?.role === 'admin' &&
+      activePage === 'employees' &&
+      employeeToken
+    ) {
+      void loadEmployees()
+    }
+  }, [currentUser?.role, activePage, employeeToken])
+
+  // =========================
+  // кнопка выход из акка сотрудника
+  // =========================
+
+  
   const handleLogout = () => {
+    // Очищаем сохранённую сессию сотрудника
+    localStorage.removeItem('fixpoint_employee_token')
+    localStorage.removeItem('fixpoint_employee_role')
+    localStorage.removeItem('fixpoint_employee_page')
+
+    // Сбрасываем данные сотрудника в приложении
     setCurrentUser(null)
-    setShowLogin(true) //после выхода показываем форму входа сотруудников
+    setEmployeeToken('')
+    setEmployeeList([])
+
+    // Возвращаем на экран входа
+    setShowLogin(true)
     setActivePage('home')
     setSelectedApplication(null)
     setAccessCode('')
@@ -320,12 +588,10 @@ function App() {
   // =========================
 
   if (currentUser) {
-
     // =========================
     // Экранчик ПОДРОБНОСТЕЙ ЗАЯВКИ
     // =========================
 
-    
     if (selectedApplication !== null) {
       const application = applicationList.find(
         (item) => item.id === selectedApplication
@@ -344,6 +610,7 @@ function App() {
             role={currentUser.role}
             activePage={activePage}
             onNavigate={(page) => {
+              localStorage.setItem('fixpoint_employee_page', page)
               setActivePage(page)
               setSelectedApplication(null)
               setError('')
@@ -356,7 +623,11 @@ function App() {
               application={application}
               currentStatus={currentStatus}
               role={currentUser.role}
-              diagnosis={applicationDiagnoses[application.id] ?? ''}
+              diagnosis={
+                applicationDiagnoses[application.id] ??
+                application.diagnosticResult ??
+                ''
+              }
               onDiagnosisChange={(value) => {
                 setApplicationDiagnoses((prev) => ({
                   ...prev,
@@ -389,8 +660,6 @@ function App() {
       )
     }
 
-
-    
     // =========================
     // СТРАНИЦА КЛИЕНТОВ ОПЕРАТОРА
     // =========================
@@ -403,6 +672,7 @@ function App() {
             role={currentUser.role}
             activePage={activePage}
             onNavigate={(page) => {
+              localStorage.setItem('fixpoint_employee_page', page)
               setActivePage(page)
               setSelectedApplication(null)
               setError('')
@@ -420,6 +690,16 @@ function App() {
 
             <section className="applications-section">
               <h2>Список клиентов</h2>
+
+              {applicationsLoading && (
+                <p>Загружаем заявки...</p>
+              )}
+
+              {applicationsError && (
+                <p className="login-error">
+                  Не удалось загрузить заявки: {applicationsError}
+                </p>
+              )}
 
               <div className="applications-list">
                 {clientList.map((client) => {
@@ -450,62 +730,22 @@ function App() {
       )
     }
 
-    
+
     // =========================
-    // СТРАНИЦА СКЛАДА!!!!
+    // СТРАНИЦА СКЛАДА !!!
     // =========================
 
     if (
       activePage === 'stock' &&
       (currentUser.role === 'admin' || currentUser.role === 'repairer')
     ) {
-      const filteredStock = stock.filter((part) =>
-        part.name.toLowerCase().includes(stockSearch.toLowerCase())
-      )
-
-      const handleAddPart = () => {
-        if (!newPartName.trim() || !newPartQuantity || !newPartPrice) {
-          setError('Заполни все поля запчасти')
-          return
-        }
-
-        const quantity = Number(newPartQuantity)
-        const price = Number(newPartPrice)
-
-        if (
-          !Number.isFinite(quantity) ||
-          !Number.isFinite(price) ||
-          quantity < 0 ||
-          price < 0
-        ) {
-          setError('Количество и цена должны быть неотрицательными числами')
-          return
-        }
-
-        const nextId = Math.max(0, ...stock.map((part) => part.id)) + 1
-
-        setStock((prev) => [
-          ...prev,
-          {
-            id: nextId,
-            name: newPartName.trim(),
-            quantity,
-            price,
-          },
-        ])
-
-        setNewPartName('')
-        setNewPartQuantity('1')
-        setNewPartPrice('')
-        setError('')
-      }
-
       return (
         <main className="dashboard">
           <Sidebar
             role={currentUser.role}
             activePage={activePage}
             onNavigate={(page) => {
+              localStorage.setItem('fixpoint_employee_page', page)
               setActivePage(page)
               setSelectedApplication(null)
               setError('')
@@ -513,19 +753,47 @@ function App() {
             onLogout={handleLogout}
           />
 
+          <StockPage
+            role={currentUser.role}
+            token={employeeToken}
+          />
+        </main>
+      )
+    }
+
+    // =========================
+    // СТРАНИЦА "ЗАЯВКИ"
+    // =========================
+
+    if (activePage === 'applications') {
+      return (
+        <main className="dashboard">
+          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              localStorage.setItem('fixpoint_employee_page', page)
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+
+          {/* ОСНОВНАЯ ЧАСТЬ */}
           <section className="dashboard-content">
             <header className="dashboard-header">
               <div>
-                <p className="dashboard-label">
-                  {currentUser.role === 'admin' ? 'АДМИНИСТРАТОР' : 'МАСТЕР'}
-                </p>
-                <h1>Склад запчастей</h1>
+                <p className="dashboard-label">РАЗДЕЛ</p>
+                <h1>Все заявки</h1>
               </div>
 
               <div className="user-info">
                 <div className="user-avatar">
                   {currentUser.name.charAt(0)}
                 </div>
+
                 <div>
                   <strong>{currentUser.name}</strong>
                   <span>{getRoleName(currentUser.role)}</span>
@@ -536,75 +804,88 @@ function App() {
             <section className="applications-section">
               <div className="section-header">
                 <div>
-                  <h2>Запчасти</h2>
-                  <p>Всего позиций: {stock.length}</p>
+                  <h2>Заявки сервисного центра</h2>
+                  <p>Все заявки, доступные вашей роли</p>
                 </div>
               </div>
 
-              <input
-                type="text"
-                placeholder="Поиск запчастей..."
-                value={stockSearch}
-                onChange={(event) => setStockSearch(event.target.value)}
-              />
+              {currentUser.role === 'operator' && (
+                <div className="details-card">
+                  <h2>Создать заявку</h2>
 
-              {currentUser.role === 'admin' && (
-                <div className="application-card stock-form-card">
-                  <div className="application-info">
-                    <h3>Добавить запчасть</h3>
-
+                  <label>
+                    Клиент
                     <input
                       type="text"
-                      placeholder="Название запчасти"
-                      value={newPartName}
-                      onChange={(event) => setNewPartName(event.target.value)}
+                      placeholder="Имя клиента"
+                      value={newApplicationClient}
+                      onChange={(event) =>
+                        setNewApplicationClient(event.target.value)
+                      }
                     />
+                  </label>
 
+                  <label>
+                    Устройство
                     <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="Количество"
-                      value={newPartQuantity}
-                      onChange={(event) => setNewPartQuantity(event.target.value)}
+                      type="text"
+                      placeholder="Например, ноутбук ASUS"
+                      value={newApplicationDevice}
+                      onChange={(event) =>
+                        setNewApplicationDevice(event.target.value)
+                      }
                     />
+                  </label>
 
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Цена за единицу, ₽"
-                      value={newPartPrice}
-                      onChange={(event) => setNewPartPrice(event.target.value)}
-                    />
+                  <button
+                    className="login-button"
+                    onClick={handleAddApplication}
+                  >
+                    Создать заявку
+                  </button>
 
-                    <button className="primary-button" onClick={handleAddPart}>
-                      Добавить запчасть
-                    </button>
-
-                    {error && <p>{error}</p>}
-                  </div>
+                  {error && <p className="login-error">{error}</p>}
                 </div>
               )}
 
+              {applicationsLoading && (
+                <p>Загружаем заявки...</p>
+              )}
+
+              {applicationsError && (
+                <p className="login-error">
+                  Не удалось загрузить заявки: {applicationsError}
+                </p>
+              )}
+
+
               <div className="applications-list">
-                {filteredStock.length === 0 ? (
-                  <p>Запчасти не найдены.</p>
-                ) : (
-                  filteredStock.map((part) => (
-                    <div className="application-card" key={part.id}>
-                      <div className="application-number">#{part.id}</div>
+                {applicationList.map((application) => {
+                  const currentStatus =
+                    applicationStatuses[application.id] ?? application.status
+
+                  return (
+                    <div
+                      className="application-card"
+                      key={application.id}
+                      onClick={() => {
+                        setSelectedApplication(application.id)
+                        setActivePage('applications')
+                      }}
+                    >
+                      <div className="application-number">
+                        #{application.id}
+                      </div>
 
                       <div className="application-info">
-                        <strong>{part.name}</strong>
-                        <span>В наличии: {part.quantity} шт.</span>
-                        <span>
-                          Цена: {part.price.toLocaleString('ru-RU')} ₽
-                        </span>
+                        <strong>{application.client}</strong>
+                        <span>{application.device}</span>
                       </div>
+
+                      <div className="status">{currentStatus}</div>
                     </div>
-                  ))
-                )}
+                  )
+                })}
               </div>
             </section>
           </section>
@@ -612,194 +893,6 @@ function App() {
       )
     }
 
-
-    // =========================
-    // СТРАНИЦА "ЗАЯВКИ"
-    // =========================
-
-    if (activePage === 'applications') {
-
-      return (
-        <main className="dashboard">
-          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
-          <Sidebar
-            role={currentUser.role}
-            activePage={activePage}
-            onNavigate={(page) => {
-              setActivePage(page)
-              setSelectedApplication(null)
-              setError('')
-            }}
-            onLogout={handleLogout}
-          />
-          
-
-
-          {/* ОСНОВНАЯ ЧАСТЬ */}
-
-          <section className="dashboard-content">
-
-            <header className="dashboard-header">
-
-              <div>
-
-                <p className="dashboard-label">
-                  РАЗДЕЛ
-                </p>
-
-                <h1>
-                  Все заявки
-                </h1>
-
-              </div>
-
-
-              <div className="user-info">
-
-                <div className="user-avatar">
-                  {currentUser.name.charAt(0)}
-                </div>
-
-                <div>
-                  <strong>
-                    {currentUser.name}
-                  </strong>
-
-                  <span>
-                    {getRoleName(currentUser.role)}
-                  </span>
-                </div>
-
-              </div>
-
-            </header>
-
-
-            <section className="applications-section">
-
-              <div className="section-header">
-
-                <div>
-
-                  <h2>
-                    Заявки сервисного центра
-                  </h2>
-
-                  <p>
-                    Все заявки, доступные вашей роли
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              
-                {currentUser.role === 'operator' && (
-                  <div className="details-card">
-                    <h2>Создать заявку</h2>
-
-                    <label>
-                      Клиент
-
-                      <input
-                        type="text"
-                        placeholder="Имя клиента"
-                        value={newApplicationClient}
-                        onChange={(event) =>
-                          setNewApplicationClient(event.target.value)
-                        }
-                      />
-                    </label>
-
-                    <label>
-                      Устройство
-
-                      <input
-                        type="text"
-                        placeholder="Например, ноутбук ASUS"
-                        value={newApplicationDevice}
-                        onChange={(event) =>
-                          setNewApplicationDevice(event.target.value)
-                        }
-                      />
-                    </label>
-
-                    <button
-                      className="login-button"
-                      onClick={handleAddApplication}
-                    >
-                      Создать заявку
-                    </button>
-
-                    {error && <p className="login-error">{error}</p>}
-                  </div>
-                )}
-
-
-              <div className="applications-list">
-
-                {applicationList.map(
-                  (application) => {
-
-                    const currentStatus =
-                      applicationStatuses[
-                        application.id
-                      ] ??
-                      application.status
-
-                    return (
-                      <div
-                        className="application-card"
-                        key={application.id}
-                        onClick={() => {
-                          setSelectedApplication(
-                            application.id
-                          )
-                          setActivePage(
-                            'applications'
-                          )
-                        }}
-                      >
-
-                        <div className="application-number">
-                          #{application.id}
-                        </div>
-
-
-                        <div className="application-info">
-
-                          <strong>
-                            {application.client}
-                          </strong>
-
-                          <span>
-                            {application.device}
-                          </span>
-
-                        </div>
-
-
-                        <div className="status">
-                          {currentStatus}
-                        </div>
-
-                      </div>
-                    )
-                  }
-                )}
-
-              </div>
-
-            </section>
-
-          </section>
-
-        </main>
-      )
-    }
-
-    
     // =========================
     // СТРАНИЦА СОТРУДНИКОВ
     // =========================
@@ -811,6 +904,7 @@ function App() {
             role={currentUser.role}
             activePage={activePage}
             onNavigate={(page) => {
+              localStorage.setItem('fixpoint_employee_page', page)
               setActivePage(page)
               setSelectedApplication(null)
               setError('')
@@ -820,38 +914,14 @@ function App() {
 
           <EmployeesPage
             employees={employeeList}
-            onToggleActive={(login) => {
-              setEmployeeList((prev) =>
-                prev.map((employee) =>
-                  employee.login === login
-                    ? { ...employee, active: !employee.active }
-                    : employee
-                )
-              )
-            }}
-            onGenerateCode={(login) => {
-              const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-              let newCode = ''
-
-              for (let i = 0; i < 12; i++) {
-                newCode += characters.charAt(
-                  Math.floor(Math.random() * characters.length)
-                )
-              }
-
-              setEmployeeList((prev) =>
-                prev.map((employee) =>
-                  employee.login === login
-                    ? { ...employee, password: newCode }
-                    : employee
-                )
-              )
-            }}
+            loading={employeesLoading}
+            error={employeesError}
+            onToggleActive={handleToggleEmployeeActive}
+            onGenerateCode={handleGenerateEmployeeCode}
           />
         </main>
       )
     }
-
 
     // =========================
     // ГЛАВНАЯ СТРАНИЦА
@@ -864,6 +934,7 @@ function App() {
           role={currentUser.role}
           activePage={activePage}
           onNavigate={(page) => {
+            localStorage.setItem('fixpoint_employee_page', page)
             setActivePage(page)
             setSelectedApplication(null)
             setError('')
@@ -871,118 +942,58 @@ function App() {
           onLogout={handleLogout}
         />
 
-
         {/* ОСНОВНАЯ ЧАСТЬ */}
-
         <section className="dashboard-content">
-
           <header className="dashboard-header">
-
             <div>
-
-              <p className="dashboard-label">
-                ПАНЕЛЬ УПРАВЛЕНИЯ
-              </p>
-
+              <p className="dashboard-label">ПАНЕЛЬ УПРАВЛЕНИЯ</p>
               <h1>
-                Добро пожаловать,{' '}
-                {currentUser.name}
+                Добро пожаловать, {currentUser.name}
               </h1>
-
             </div>
 
-
             <div className="user-info">
-
               <div className="user-avatar">
                 {currentUser.name.charAt(0)}
               </div>
 
               <div>
-
-                <strong>
-                  {currentUser.name}
-                </strong>
-
-                <span>
-                  {getRoleName(currentUser.role)}
-                </span>
-
+                <strong>{currentUser.name}</strong>
+                <span>{getRoleName(currentUser.role)}</span>
               </div>
-
             </div>
-
           </header>
 
-
           {/* СТАТИСТИКА */}
-
           <section className="stats">
-
             <div className="stat-card">
-              <span>
-                Всего заявок
-              </span>
-
-              <strong>
-                12
-              </strong>
+              <span>Всего заявок</span>
+              <strong>12</strong>
             </div>
 
-
             <div className="stat-card">
-              <span>
-                В работе
-              </span>
-
-              <strong>
-                4
-              </strong>
+              <span>В работе</span>
+              <strong>4</strong>
             </div>
 
-
             <div className="stat-card">
-              <span>
-                На диагностике
-              </span>
-
-              <strong>
-                3
-              </strong>
+              <span>На диагностике</span>
+              <strong>3</strong>
             </div>
 
-
             <div className="stat-card">
-              <span>
-                Готово
-              </span>
-
-              <strong>
-                5
-              </strong>
+              <span>Готово</span>
+              <strong>5</strong>
             </div>
-
           </section>
 
-
           {/* ПОСЛЕДНИЕ ЗАЯВКИ */}
-
           <section className="applications-section">
-
             <div className="section-header">
-
               <div>
-
-                <h2>
-                  Последние заявки
-                </h2>
-
-                <p>
-                  Недавно созданные заявки клиентов
-                </p>
-
+                <h2>Последние заявки</h2>
+                <p>Недавно созданные заявки клиентов</p>
               </div>
-
 
               <button
                 className="view-all-button"
@@ -993,66 +1004,48 @@ function App() {
               >
                 Все заявки →
               </button>
-
             </div>
 
+            {applicationsLoading && (
+              <p>Загружаем заявки...</p>
+            )}
+
+            {applicationsError && (
+              <p className="login-error">
+                Не удалось загрузить заявки: {applicationsError}
+              </p>
+            )}
 
             <div className="applications-list">
+              {applicationList.map((application) => {
+                const currentStatus =
+                  applicationStatuses[application.id] ?? application.status
 
-              {applicationList.map(
-                (application) => {
-
-                  const currentStatus =
-                    applicationStatuses[
-                      application.id
-                    ] ??
-                    application.status
-
-                  return (
-                    <div
-                      className="application-card"
-                      key={application.id}
-                      onClick={() => {
-                        setSelectedApplication(
-                          application.id
-                        )
-                        setActivePage('applications')
-                      }}
-                    >
-
-                      <div className="application-number">
-                        #{application.id}
-                      </div>
-
-
-                      <div className="application-info">
-
-                        <strong>
-                          {application.client}
-                        </strong>
-
-                        <span>
-                          {application.device}
-                        </span>
-
-                      </div>
-
-
-                      <div className="status">
-                        {currentStatus}
-                      </div>
-
+                return (
+                  <div
+                    className="application-card"
+                    key={application.id}
+                    onClick={() => {
+                      setSelectedApplication(application.id)
+                      setActivePage('applications')
+                    }}
+                  >
+                    <div className="application-number">
+                      #{application.id}
                     </div>
-                  )
-                }
-              )}
 
+                    <div className="application-info">
+                      <strong>{application.client}</strong>
+                      <span>{application.device}</span>
+                    </div>
+
+                    <div className="status">{currentStatus}</div>
+                  </div>
+                )
+              })}
             </div>
-
           </section>
-
         </section>
-
       </main>
     )
   }
@@ -1086,44 +1079,41 @@ function App() {
     return (
       <ClientProfile
         client={currentClient}
-        applications={applicationList}
-        onCreateApplication={handleCreateClientApplication}
-        onLogout={() => {
-          setCurrentClient(null)
-          setShowClientAuth(false)
-          setShowLogin(false)
+        onLogout={async () => {
+          try {
+            await apiRequest<void>('/auth/client/logout', {
+              method: 'POST',
+            })
+          } catch (err) {
+            console.error('Не удалось завершить серверную сессию:', err)
+          } finally {
+            setCurrentClient(null)
+            setShowClientAuth(false)
+            setShowLogin(false)
+          }
         }}
       />
     )
   }
-
-
 
   // ===========================
   // ЭКРАН ВХОДАА
   // =========================
 
   if (showLogin) {
-
     return (
       <main className="login">
-
         <div className="login-content">
-
           <p className="welcome-label">
             FIXPOINT / СОТРУДНИКАМ
           </p>
 
-          <h1>
-            Вход в систему
-          </h1>
+          <h1>Вход в систему</h1>
 
           <p className="welcome-description">
             Введите индивидуальный код доступа, выданный администратором.
           </p>
 
-
-          
           <div className="form">
             <label>
               Код доступа сотрудника
@@ -1132,9 +1122,7 @@ function App() {
                 type="password"
                 placeholder="Введите код доступа"
                 value={accessCode}
-                onChange={(event) =>
-                  setAccessCode(event.target.value)
-                }
+                onChange={(event) => setAccessCode(event.target.value)}
                 autoComplete="current-password"
               />
             </label>
@@ -1163,13 +1151,10 @@ function App() {
               ← На главную
             </button>
           </div>
-
         </div>
-
       </main>
     )
   }
-
 
   // =========================
   // ГЛАВНЫЙ ЭКРАН аа
