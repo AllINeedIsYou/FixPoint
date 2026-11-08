@@ -21,6 +21,8 @@ import ClientProfile from './ClientProfile'
 import { apiRequest } from './api'
 //Эт склад
 import StockPage from './StockPage'
+//доставка
+import DeliveryPage from './DeliveryPage'
 
 function App() {
   // =========================
@@ -757,6 +759,32 @@ function App() {
             role={currentUser.role}
             token={employeeToken}
           />
+        </main>
+      )
+    }
+
+    // =========================
+    // СТРАНИЦА КУРЬЕРСКОЙ ДОСТАВКИ
+    // =========================
+
+    if (activePage === 'delivery' && currentUser.role === 'operator') {
+      return (
+        <main className="dashboard">
+          <Sidebar
+            role={currentUser.role}
+            activePage={activePage}
+            onNavigate={(page) => {
+              localStorage.setItem('fixpoint_employee_page', page)
+              setActivePage(page)
+              setSelectedApplication(null)
+              setError('')
+            }}
+            onLogout={handleLogout}
+          />
+
+          <section className="dashboard-content">
+            <DeliveryPage token={employeeToken} />
+          </section>
         </main>
       )
     }

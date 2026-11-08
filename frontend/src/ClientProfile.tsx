@@ -29,7 +29,10 @@ export default function ClientProfile({
   const [device, setDevice] = useState('')
   const [deviceModel, setDeviceModel] = useState('')
   const [description, setDescription] = useState('')
+  // Адрес
   const [address, setAddress] = useState('')
+  // Дата и время встречи с курьером
+  const [courierVisitAt, setCourierVisitAt] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -66,7 +69,8 @@ export default function ClientProfile({
       !device.trim() ||
       !deviceModel.trim() ||
       !description.trim() ||
-      !address.trim()
+      !address.trim() ||
+      !courierVisitAt
     ) {
       setError('Заполни все поля заявки.')
       return
@@ -84,6 +88,9 @@ export default function ClientProfile({
             device_model: deviceModel.trim(),
             info: description.trim(),
             address: address.trim(),
+
+            // для преобразования местного времени в исо с чсовым поясом ютс
+            courier_visit_at: new Date(courierVisitAt).toISOString(),
           },
         }
       )
@@ -94,6 +101,7 @@ export default function ClientProfile({
       setDeviceModel('')
       setDescription('')
       setAddress('')
+      setCourierVisitAt('')
       setShowForm(false)
     } catch (err) {
       setError(
@@ -247,6 +255,21 @@ export default function ClientProfile({
                 onChange={(event) => setAddress(event.target.value)}
                 placeholder="Адрес для оформления заявки"
                 maxLength={1000}
+                required
+              />
+
+              <label htmlFor="client-courier-time">
+                Удобное время встречи с курьером
+              </label>
+
+              <input
+                id="client-courier-time"
+                type="datetime-local"
+                value={courierVisitAt}
+                onChange={(event) => setCourierVisitAt(event.target.value)}
+                min={new Date(
+                  Date.now() - new Date().getTimezoneOffset() * 60000
+                ).toISOString().slice(0, 16)}
                 required
               />
 
