@@ -1,4 +1,4 @@
-
+//боковое меню
 type SidebarProps = {
   role: string
   activePage: string
@@ -24,6 +24,11 @@ function Sidebar({
         ? 'Все заявки'
         : 'Мои заявки',
       roles: ['operator', 'engineer', 'repairer', 'admin'],
+    },
+    {
+      page: 'delivery',
+      label: 'Курьерская доставка',
+      roles: ['operator'],
     },
     {
       page: 'clients',

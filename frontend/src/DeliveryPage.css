@@ -1,0 +1,258 @@
+
+.delivery-page {
+  width: 100%;
+  padding: 0 0 40px;
+}
+
+.delivery-description {
+  margin: 8px 0 0;
+  color: #718096;
+  font-size: 14px;
+}
+
+.delivery-refresh {
+  padding: 11px 18px;
+  border: 1px solid #dce5f1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #315b96;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delivery-refresh:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.delivery-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 28px 0;
+}
+
+.delivery-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 20px;
+  border: 1px solid #e5ebf3;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.delivery-summary-card span {
+  color: #718096;
+  font-size: 13px;
+}
+
+.delivery-summary-card strong {
+  color: #243b5a;
+  font-size: 27px;
+}
+
+.delivery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.delivery-card {
+  padding: 22px;
+  border: 1px solid #e3eaf3;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 3px 12px rgba(30, 60, 100, 0.04);
+}
+
+.delivery-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.delivery-number {
+  color: #718096;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.delivery-status {
+  padding: 7px 11px;
+  border-radius: 20px;
+  background: #edf3ff;
+  color: #3566a5;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-courier_dispatched {
+  background: #fff4df;
+  color: #a66b12;
+}
+
+.status-courier_picked_up {
+  background: #e9f2ff;
+  color: #3566a5;
+}
+
+.delivery-client {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.delivery-client h2 {
+  margin: 0 0 3px;
+  color: #243b5a;
+  font-size: 19px;
+}
+
+.delivery-client span {
+  color: #718096;
+  font-size: 13px;
+}
+
+.delivery-device {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f6f8fb;
+  color: #34465e;
+}
+
+.delivery-device p {
+  margin: 7px 0 0;
+  color: #718096;
+  font-size: 13px;
+}
+
+.delivery-time {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.delivery-time span {
+  color: #718096;
+  font-size: 12px;
+}
+
+.delivery-time strong {
+  color: #34465e;
+  font-size: 14px;
+}
+
+.delivery-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 24px 0;
+}
+
+.delivery-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #9aa8b9;
+  text-align: center;
+  font-size: 11px;
+}
+
+.delivery-step-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.delivery-step.completed {
+  color: #3566a5;
+}
+
+.delivery-step.completed .delivery-step-dot {
+  border-color: #477fc2;
+  background: #477fc2;
+}
+
+.delivery-action {
+  width: 100%;
+  padding: 13px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #356db1;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.delivery-action:hover {
+  background: #285991;
+}
+
+.delivery-action:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.delivery-finished {
+  padding: 13px;
+  border-radius: 10px;
+  background: #edf7f0;
+  color: #34734b;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.delivery-empty {
+  padding: 45px 20px;
+  border: 1px dashed #d5dfeb;
+  border-radius: 14px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.delivery-empty h2 {
+  margin: 0 0 9px;
+  color: #34465e;
+  font-size: 18px;
+}
+
+.delivery-empty p,
+.delivery-message {
+  color: #718096;
+  font-size: 14px;
+}
+
+.delivery-error {
+  margin: 16px 0;
+  padding: 13px 16px;
+  border-radius: 10px;
+  background: #fff0f0;
+  color: #b43d3d;
+  font-size: 14px;
+}
+
+@media (max-width: 700px) {
+  .delivery-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-progress {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 18px;
+  }
+
+  .delivery-card-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
