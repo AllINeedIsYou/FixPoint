@@ -263,3 +263,9 @@
     transition: none;
   }
 }
+.employee-create-form { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(180px, .8fr) auto; align-items: end; gap: 14px; margin-bottom: 24px; }
+.employee-create-form h2 { grid-column: 1 / -1; margin: 0; color: #ffffff; }
+.employee-create-form label { display: flex; flex-direction: column; gap: 7px; color: #dbeafe; font-size: 13px; }
+.employee-create-form input, .employee-create-form select { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid #49617f; border-radius: 8px; background: #121d2d; color: #ffffff; font: inherit; }
+.employee-create-form button { min-height: 42px; }
+@media (max-width: 700px) { .employee-create-form { grid-template-columns: 1fr; } }

@@ -222,3 +222,8 @@
     width: 100%;
   }
 }
+
+.app-detail-secondary { padding: 11px 16px; border: 1px solid #bfd0e4; border-radius: 9px; background: #f8fafc; color: #24466f; font: inherit; font-weight: 600; cursor: pointer; }
+.app-detail-danger { padding: 11px 16px; border: 1px solid #b91c1c; border-radius: 9px; background: #b91c1c; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.app-detail-actions-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.app-detail-secondary:disabled, .app-detail-danger:disabled { opacity: .6; cursor: wait; }

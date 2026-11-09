@@ -1,25 +1,22 @@
-
 import './HomePage.css'
+
+import logo from './assets/logo.png'
+import fixi from './assets/fixi.png'
+import fixiFly from './assets/fixi_fly.png'
 
 type HomePageProps = {
   onEmployeeClick: () => void
   onClientClick: () => void
 }
 
-export default function HomePage({
-  onEmployeeClick,
-  onClientClick,
-}: HomePageProps) {
+function HomePage({ onEmployeeClick, onClientClick }: HomePageProps) {
   return (
-    <div className="fp-home">
-      {/* Верхняя панель сайта */}
+    <main className="fp-home" id="home">
+      {/* навигация */}
       <header className="fp-header">
-        <a className="fp-logo" href="#home">
-          <span className="fp-logo-icon">F</span>
-          <span>
-            <strong>FixPoint</strong>
-            <small>СЕРВИСНЫЙ ЦЕНТР</small>
-          </span>
+        <a href="#home" className="fp-logo">
+          <img src={logo} alt="" />
+          <span>FixPoint</span>
         </a>
 
         <nav className="fp-nav">
@@ -28,252 +25,305 @@ export default function HomePage({
           <a href="#contacts">Контакты</a>
         </nav>
 
-        <div className="fp-header-actions">
-          <button
-            className="fp-employee-button"
-            type="button"
-            onClick={onEmployeeClick}
-          >
-            <span>↗</span> Сотрудникам
-          </button>
-        </div>
+        <button className="fp-employee" onClick={onEmployeeClick}>
+          <span className="fp-employee-dot" />
+          Для сотрудников
+          <span className="fp-arrow">↗</span>
+        </button>
       </header>
 
-      <main id="home">
-        {/* Главный экран */}
-        <section className="fp-hero">
-          <div className="fp-hero-content">
-            <div className="fp-eyebrow">
-              <span className="fp-status-dot" />
-              РЕМОНТ ТЕХНИКИ БЕЗ ЛИШНИХ ХЛОПОТ
+      {/* первый экран */}
+      <section className="fp-hero">
+        <div className="fp-hero-meta">
+          <span>СЕРВИСНЫЙ ЦЕНТР / 2026</span>
+          <span className="fp-meta-center">РЕМОНТ • ДИАГНОСТИКА • ЗАБОТА</span>
+          <span>МОСКВА · РАБОТАЕМ ДЛЯ ВАС</span>
+        </div>
+
+        <div className="fp-wordmark">
+          <h1>FixPoint</h1>
+          <span className="fp-wordmark-star">✳</span>
+          <span className="fp-wordmark-note"></span>
+        </div>
+
+        <div className="fp-hero-main">
+          <div className="fp-hero-copy">
+            <div className="fp-overline">
+              <span className="fp-overline-number">01</span>
+              <span className="fp-overline-line" />
+              <span>ТЕХНИКА В НАДЁЖНЫХ РУКАХ</span>
             </div>
 
-            <h1>
-              Вернём вашей
+            <h2>
+              Когда техника
               <br />
-              технике <span>жизнь</span>
-            </h1>
+              просит <span>помощи.</span>
+            </h2>
 
-            <p className="fp-hero-description">
-              Диагностика, ремонт и обслуживание техники.
-              Объясняем, что случилось, согласовываем стоимость
-              и держим вас в курсе каждого этапа.
+            <p>
+              Найдём причину неисправности, поможем с ремонтом
+              и позаботимся о вашем устройстве.
             </p>
 
-            <div className="fp-hero-actions">
-              {/* Теперь заявка начинается с регистрации клиента */}
-              <button
-                className="fp-primary-button"
-                type="button"
-                onClick={onClientClick}
-              >
+            <div className="fp-hero-buttons">
+              <button className="fp-button-primary" onClick={onClientClick}>
                 Оставить заявку <span>↗</span>
               </button>
-
-              <a className="fp-secondary-button" href="#process">
-                Как всё устроено
+              <a className="fp-button-link" href="#services">
+                Посмотреть услуги <span>↓</span>
               </a>
             </div>
 
-            <div className="fp-trust-row">
-              <div className="fp-trust-item">
-                <strong>01</strong>
-                <span>Приём техники</span>
-              </div>
-              <div className="fp-trust-item">
-                <strong>02</strong>
-                <span>Диагностика</span>
-              </div>
-              <div className="fp-trust-item">
-                <strong>03</strong>
-                <span>Ремонт и выдача</span>
-              </div>
+            <div className="fp-hero-footnote">
+              <span>✦</span>
+              ВАШЕ УСТРОЙСТВО - НАША ЗАБОТА
             </div>
           </div>
 
-          {/* Декоративная иллюстрация устройства */}
-          <div className="fp-hero-visual" aria-hidden="true">
-            <div className="fp-orbit fp-orbit-one" />
-            <div className="fp-orbit fp-orbit-two" />
+          <div className="fp-hero-art">
+            <div className="fp-art-grid" />
+            <div className="fp-art-orbit fp-orbit-one" />
+            <div className="fp-art-orbit fp-orbit-two" />
 
-            <div className="fp-device">
-              <div className="fp-device-top">
-                <span />
-                <span />
-                <span />
-              </div>
+            <span className="fp-art-spark fp-spark-one">✳</span>
+            <span className="fp-art-spark fp-spark-two">✦</span>
+            <span className="fp-art-label">MEET FIXI</span>
+            <span className="fp-art-number">№ 001</span>
 
-              <div className="fp-device-screen">
-                <div className="fp-screen-label">FIXPOINT / SYSTEM</div>
-                <div className="fp-screen-symbol">+</div>
-                <div className="fp-screen-line" />
-                <div className="fp-screen-line short" />
-                <div className="fp-screen-footer">
-                  <span>SERVICE</span>
-                  <span>READY_</span>
-                </div>
-              </div>
+            <img
+              src={fixi}
+              alt="Персонаж FixPoint"
+              className="fp-fixi"
+            />
 
-              <div className="fp-device-bottom">
-                <span>PRECISION REPAIR</span>
-                <span>FP—01</span>
+            <div className="fp-art-sticker">
+              <span>✦</span>
+              <div>
+                <strong>Привет!</strong>
+                <small>Я помогу тебе</small>
               </div>
             </div>
-
-            <div className="fp-floating-card fp-card-top">
-              <span className="fp-card-icon">✓</span>
-              <span>
-                <strong>Под контролем</strong>
-                <small>Каждый этап ремонта</small>
-              </span>
-            </div>
-
-            <div className="fp-floating-card fp-card-bottom">
-              <span className="fp-card-icon fp-card-icon-orange">↗</span>
-              <span>
-                <strong>Понятный процесс</strong>
-                <small>От заявки до выдачи</small>
-              </span>
-            </div>
-
-            <div className="fp-visual-index">01 / SERVICE</div>
           </div>
-        </section>
+        </div>
 
-        {/* Услуги */}
-        <section className="fp-section fp-services" id="services">
-          <div className="fp-section-heading">
+        <div className="fp-hero-bottom">
+          <span>FIXPOINT SERVICE</span>
+          <span>МЫ ЗНАЕМ, КАК ВЕРНУТЬ ТЕХНИКУ К ЖИЗНИ</span>
+          <a href="#services">SCROLL TO EXPLORE ↓</a>
+        </div>
+      </section>
+
+      {/* бегущая строка */}
+      <div className="fp-marquee" aria-hidden="true">
+        <div className="fp-marquee-track">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <span key={index}>
+              FIXPOINT <i>✳</i> РЕМОНТ ТЕХНИКИ <i>✳</i> ЗАБОТА О ВАЖНОМ <i>✳</i>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* услуги */}
+      <section className="fp-section fp-services" id="services">
+        <div className="fp-section-top">
+          <div>
+            <span className="fp-eyebrow">02 / ЧЕМ МЫ ПОМОЖЕМ</span>
+            <h2>
+              Всё для вашей
+              <br />
+              <span>техники.</span>
+            </h2>
+          </div>
+          <p>
+            От поиска проблемы до её решения.
+            <br />
+            Разберёмся вместе.
+          </p>
+        </div>
+
+        <div className="fp-service-grid">
+          <article className="fp-service-card fp-service-card-main">
+            <div className="fp-service-top">
+              <span>01 — ANALYSIS</span>
+              <span className="fp-service-icon">⌕</span>
+            </div>
+            <div className="fp-service-content">
+              <span className="fp-service-tag">СНАЧАЛА РАЗБЕРЁМСЯ</span>
+              <h3>Диагностика</h3>
+              <p>
+                Определим причину неисправности и подскажем,
+                что можно сделать.
+              </p>
+            </div>
+            <span className="fp-service-decoration">⌕</span>
+            <span className="fp-service-arrow">↗</span>
+          </article>
+
+          <article className="fp-service-card fp-service-card-blue">
+            <div className="fp-service-top">
+              <span>02 — REPAIR</span>
+              <span className="fp-service-icon">✳</span>
+            </div>
+            <div className="fp-service-content">
+              <span className="fp-service-tag">ВОЗВРАЩАЕМ К ЖИЗНИ</span>
+              <h3>Ремонт техники</h3>
+              <p>
+                Поможем устранить неисправность и вернуть
+                устройству работоспособность.
+              </p>
+            </div>
+            <span className="fp-service-decoration">✳</span>
+            <span className="fp-service-arrow">↗</span>
+          </article>
+
+          <article className="fp-service-card fp-service-card-purple">
+            <div className="fp-service-top">
+              <span>03 — CARE</span>
+              <span className="fp-service-icon">♡</span>
+            </div>
+            <div className="fp-service-content">
+              <span className="fp-service-tag">ЗАБОТИМСЯ О ВАЖНОМ</span>
+              <h3>Обслуживание</h3>
+              <p>
+                Поможем поддерживать устройство в хорошем
+                состоянии.
+              </p>
+            </div>
+            <span className="fp-service-decoration">♡</span>
+            <span className="fp-service-arrow">↗</span>
+          </article>
+        </div>
+
+        <div className="fp-service-bottom">
+          <span>НЕ УВЕРЕНЫ, КАКАЯ УСЛУГА НУЖНА?</span>
+          <button onClick={onClientClick}>
+            Расскажите нам о проблеме <span>↗</span>
+          </button>
+        </div>
+      </section>
+
+      {/* этапы работы */}
+      <section className="fp-process-section" id="process">
+        <div className="fp-section fp-process">
+          <div className="fp-section-top">
             <div>
-              <div className="fp-section-label">ЧЕМ МЫ ПОМОЖЕМ</div>
+              <span className="fp-eyebrow">03 / ВСЁ ПО ПОРЯДКУ</span>
               <h2>
-                Техника заслуживает
+                Четыре шага
                 <br />
-                второго шанса
+                до <span>результата.</span>
               </h2>
             </div>
             <p>
-              От первичной проверки до завершения ремонта —
-              всё в одном месте.
+              Прозрачно, понятно и без лишней
+              <br />
+              головной боли.
             </p>
           </div>
 
-          <div className="fp-service-grid">
-            <article className="fp-service-card">
-              <span className="fp-service-number">01 / CHECK</span>
-              <div className="fp-service-icon">⌕</div>
+          <div className="fp-steps">
+            <article className="fp-step">
+              <span className="fp-step-number">01</span>
+              <div className="fp-step-icon">↗</div>
+              <h3>Заявка</h3>
+              <p>Расскажите, что случилось с вашим устройством.</p>
+            </article>
+
+            <article className="fp-step">
+              <span className="fp-step-number">02</span>
+              <div className="fp-step-icon">⌕</div>
               <h3>Диагностика</h3>
-              <p>
-                Определяем причину неисправности и объясняем,
-                какие работы действительно необходимы.
-              </p>
-              <span className="fp-service-arrow">↗</span>
+              <p>Определим причину проблемы и обсудим решение.</p>
             </article>
 
-            <article className="fp-service-card">
-              <span className="fp-service-number">02 / REPAIR</span>
-              <div className="fp-service-icon">⌘</div>
-              <h3>Ремонт техники</h3>
-              <p>
-                Организуем ремонт, контролируем ход работ
-                и проверяем результат перед выдачей.
-              </p>
-              <span className="fp-service-arrow">↗</span>
+            <article className="fp-step">
+              <span className="fp-step-number">03</span>
+              <div className="fp-step-icon">✳</div>
+              <h3>Ремонт</h3>
+              <p>Согласуем работы и займёмся вашим устройством.</p>
             </article>
 
-            <article className="fp-service-card">
-              <span className="fp-service-number">03 / CARE</span>
-              <div className="fp-service-icon">✳</div>
-              <h3>Обслуживание</h3>
-              <p>
-                Помогаем разобраться с состоянием устройства
-                и подобрать необходимые работы.
-              </p>
-              <span className="fp-service-arrow">↗</span>
+            <article className="fp-step">
+              <span className="fp-step-number">04</span>
+              <div className="fp-step-icon">✓</div>
+              <h3>Готово!</h3>
+              <p>Вы получите своё устройство обратно.</p>
             </article>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Этапы работы */}
-        <section className="fp-process" id="process">
-          <div className="fp-section-label">ПРОСТО И ПРОЗРАЧНО</div>
-          <h2>От проблемы к решению</h2>
-          <p className="fp-process-intro">
-            Вы знаете, что происходит с вашей техникой,
-            а мы знаем, какой следующий шаг.
+      {/* доставка */}
+      <section className="fp-courier">
+        <div className="fp-courier-symbol">↗</div>
+        <div className="fp-courier-copy">
+          <span className="fp-eyebrow">ЕСТЬ ЕЩЁ ОДНА УДОБНАЯ ВОЗМОЖНОСТЬ</span>
+          <h2>Курьер может приехать к вам.</h2>
+          <p>
+            При оформлении заявки укажите адрес и удобное время встречи.
+            Мы обсудим передачу устройства и дальнейший ремонт.
           </p>
+        </div>
+        <button onClick={onClientClick}>
+          Оформить заявку <span>↗</span>
+        </button>
+      </section>
 
-          <div className="fp-process-grid">
-            <div className="fp-process-step">
-              <span>01</span>
-              <h3>Оставляете заявку</h3>
-              <p>Рассказываете, что случилось с устройством.</p>
-            </div>
-            <div className="fp-process-step">
-              <span>02</span>
-              <h3>Проводим диагностику</h3>
-              <p>Уточняем неисправность и необходимые работы.</p>
-            </div>
-            <div className="fp-process-step">
-              <span>03</span>
-              <h3>Согласовываем ремонт</h3>
-              <p>Обсуждаем стоимость и дальнейшие действия.</p>
-            </div>
-            <div className="fp-process-step">
-              <span>04</span>
-              <h3>Возвращаем технику</h3>
-              <p>
-                Завершаем работы и подготавливаем устройство к выдаче.
-              </p>
-            </div>
-          </div>
-        </section>
+      {/* финальный призыв */}
+      <section className="fp-contact" id="contacts">
+        <div className="fp-contact-copy">
+          <span className="fp-eyebrow">04 / ПОРА НАЧАТЬ</span>
+          <h2>
+            Вернём технику
+            <br />
+            <span>к жизни.</span>
+          </h2>
+          <p>
+            Создайте аккаунт, оставьте заявку и доверьте нам
+            заботу о своём устройстве.
+          </p>
+          <button className="fp-contact-button" onClick={onClientClick}>
+            Оставить заявку <span>↗</span>
+          </button>
+        </div>
 
-        {/* Контактный блок */}
-        <section className="fp-contact" id="contacts">
-          <div>
-            <div className="fp-section-label">ВАША ТЕХНИКА — НАШ ПРИОРИТЕТ</div>
-            <h2>Начнём с вашей проблемы.</h2>
-            <p>
-              Создайте аккаунт, оставьте заявку и следите
-              за ходом ремонта в личном кабинете.
-            </p>
-          </div>
-
-          <div className="fp-contact-actions">
-            <button
-              className="fp-primary-button"
-              type="button"
-              onClick={onClientClick}
-            >
-              Перейти к заявке <span>↗</span>
-            </button>
-            <small>
-              Для оформления заявки потребуется аккаунт клиента.
-            </small>
-          </div>
-        </section>
-      </main>
-
-      {/* Нижняя часть сайта */}
-      <footer className="fp-footer">
-        <a className="fp-logo fp-footer-logo" href="#home">
-          <span className="fp-logo-icon">F</span>
-          <span>
-            <strong>FixPoint</strong>
-            <small>СЕРВИСНЫЙ ЦЕНТР</small>
+        <div className="fp-contact-art">
+          <div className="fp-contact-ring" />
+          <span className="fp-contact-star">✳</span>
+          <span className="fp-contact-caption">FIX IT WITH FIXPOINT</span>
+          <img
+            src={fixiFly}
+            alt="Персонаж FixPoint в полёте"
+            className="fp-fixi-fly"
+          />
+          <span className="fp-contact-stamp">
+            FIX
+            <br />
+            POINT
           </span>
+        </div>
+      </section>
+
+      {/* подвал */}
+      <footer className="fp-footer">
+        <a href="#home" className="fp-footer-logo">
+          <img src={logo} alt="" />
+          <span>FixPoint</span>
         </a>
 
-        <span>© FixPoint · Сервис, которому можно доверять.</span>
+        <span className="fp-footer-copy">© 2026 FIXPOINT SERVICE</span>
 
-        <button
-          className="fp-footer-employee"
-          type="button"
-          onClick={onEmployeeClick}
-        >
-          Вход для сотрудников ↗
-        </button>
+        <nav className="fp-footer-nav">
+          <a href="#services">Услуги</a>
+          <a href="#process">Как мы работаем</a>
+          <a href="#contacts">Контакты</a>
+        </nav>
+
+        <button onClick={onEmployeeClick}>Для сотрудников ↗</button>
       </footer>
-    </div>
+    </main>
   )
 }
+
+export default HomePage

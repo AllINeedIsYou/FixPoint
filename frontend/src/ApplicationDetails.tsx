@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import './ApplicationDetails.css'
 
@@ -14,75 +13,121 @@ type Application = {
   status: string
 }
 
+export type ApplicationAction =
+  | 'take-engineer'
+  | 'diagnose'
+  | 'take-repair'
+  | 'repair'
+  | 'take-check'
+  | 'check'
+  | 'issue'
+  | 'release'
+
+type ActionData = {
+  diagnostic_info?: string
+  passed?: boolean
+  comment?: string
+}
+
 type ApplicationDetailsProps = {
   application: Application
   currentStatus: string
+  statusInfo: number
   role: string
+  employeeId: number | null
+  assigneeEngineerId: number | null
+  assigneeRepairerId: number | null
+  checkResult: string
   diagnosis: string
   onDiagnosisChange: (value: string) => void
-  onStatusChange: (status: string) => void
+  onAction: (action: ApplicationAction, data?: ActionData) => Promise<void>
+  onRelease: () => Promise<void>
+  onDelete: () => Promise<void>
   onBack: () => void
-
-  // Новые свойства для запчастей
   stock: StockPart[]
   usedParts: UsedPart[]
   canEditParts: boolean
-  onAddPart: (stockPartId: number) => void
-  onRemovePart: (stockPartId: number) => void
+  workCost: number
+  partsCost: number
+  totalCost: number
+  onAddPart: (stockPartId: number) => Promise<void>
+  onRemovePart: (partId: number) => Promise<void>
 }
 
 function ApplicationDetails({
   application,
   currentStatus,
+  statusInfo,
   role,
+  employeeId,
+  assigneeEngineerId,
+  assigneeRepairerId,
+  checkResult,
   diagnosis,
   onDiagnosisChange,
-  onStatusChange,
+  onAction,
+  onRelease,
+  onDelete,
   onBack,
   stock,
   usedParts,
   canEditParts,
+  workCost,
+  partsCost,
+  totalCost,
   onAddPart,
   onRemovePart,
 }: ApplicationDetailsProps) {
-  // Состояние используется только для сообщения об ошибке формы
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [checkComment, setCheckComment] = useState('')
+  const [checkPassed, setCheckPassed] = useState(true)
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false)
 
-  const finishDiagnosis = () => {
-    if (!diagnosis.trim()) {
-      setError('Сначала укажите результат диагностики')
-      return
-    }
-
+  async function runAction(action: ApplicationAction, data?: ActionData) {
+    setBusy(true)
     setError('')
-    onStatusChange('Ожидание ремонта')
+    try {
+      await onAction(action, data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось выполнить действие')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const getNextStep = () => {
-    if (currentStatus === 'Новая') {
-      return 'Инженер должен принять заявку в работу'
-    }
+  const isMyEngineerAssignment =
+    employeeId !== null && assigneeEngineerId === employeeId
+  const isMyRepairerAssignment =
+    employeeId !== null && assigneeRepairerId === employeeId
+  const canRelease =
+    (role === 'engineer' && (statusInfo === 0 || statusInfo === 2) && isMyEngineerAssignment) ||
+    (role === 'repairer' && statusInfo === 1 && isMyRepairerAssignment) ||
+    ((role === 'operator' || role === 'admin') &&
+      ((statusInfo === 0 || statusInfo === 2) && assigneeEngineerId !== null ||
+       statusInfo === 1 && assigneeRepairerId !== null))
 
-    if (
-      currentStatus === 'В работе у инженера' ||
-      currentStatus === 'Диагностика'
-    ) {
-      return 'После диагностики заявка будет передана мастеру'
+  async function releaseAssignment() {
+    setBusy(true)
+    setError('')
+    try {
+      await onRelease()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось снять исполнителя')
+    } finally {
+      setBusy(false)
     }
-
-    if (
-      currentStatus === 'Ожидание ремонта' ||
-      currentStatus === 'В ремонте'
-    ) {
-      return 'Следующий этап — завершение ремонта'
-    }
-
-    if (currentStatus === 'Готово') {
-      return 'Ремонт завершён. Можно организовать выдачу устройства'
-    }
-
-    return 'Текущий этап обработки заявки'
   }
+
+  const nextStep = (() => {
+    if (statusInfo < 0) return 'Сначала оператор должен завершить доставку в ремонтный центр.'
+    if (statusInfo === 0) return 'Инженер принимает заявку и проводит диагностику.'
+    if (statusInfo === 1) return 'Мастер выполняет ремонт и указывает использованные запчасти.'
+    if (statusInfo === 2) return 'Инженер проверяет качество выполненного ремонта.'
+    if (statusInfo === 3) return 'Оператор может выдать устройство клиенту.'
+    if (statusInfo === 4) return 'Заявка закрыта.'
+    return 'Текущий этап обработки заявки.'
+  })()
 
   return (
     <div className="app-detail">
@@ -92,203 +137,316 @@ function ApplicationDetails({
 
       <header className="app-detail-header">
         <div>
-          <p className="app-detail-eyebrow">
-            ЗАЯВКА #{application.id}
-          </p>
+          <p className="app-detail-eyebrow">ЗАЯВКА #{application.id}</p>
           <h1>Карточка заявки</h1>
           <p className="app-detail-subtitle">
             Информация об устройстве и ходе ремонта
           </p>
         </div>
-
-        <span className="app-detail-status">
-          {currentStatus}
-        </span>
+        <span className="app-detail-status">{currentStatus}</span>
       </header>
 
-      {/* Основная информация о заявке */}
       <section className="app-detail-card">
         <h2>Информация о клиенте и устройстве</h2>
-
         <div className="app-detail-info-grid">
           <div className="app-detail-info-item">
             <span>Номер заявки</span>
             <strong>#{application.id}</strong>
           </div>
-
           <div className="app-detail-info-item">
             <span>Клиент</span>
             <strong>{application.client}</strong>
           </div>
-
           <div className="app-detail-info-item">
             <span>Устройство</span>
             <strong>{application.device}</strong>
           </div>
-
           <div className="app-detail-info-item">
-            <span>Текущий статус</span>
+            <span>Текущий этап</span>
             <strong>{currentStatus}</strong>
           </div>
         </div>
       </section>
 
-      {/* Рабочие действия инженера */}
       {role === 'engineer' && (
         <section className="app-detail-card">
           <h2>Работа инженера</h2>
 
-          {currentStatus === 'Новая' && (
+          {statusInfo === 0 && assigneeEngineerId === null && (
             <>
-              <p>
-                Заявка ещё не принята в работу.
-              </p>
-
+              <p>Заявка ожидает диагностики. Сначала закрепи её за собой.</p>
               <button
                 className="app-detail-primary"
-                onClick={() =>
-                  onStatusChange('В работе у инженера')
-                }
+                disabled={busy}
+                onClick={() => void runAction('take-engineer')}
               >
-                Принять заявку
+                {busy ? 'Выполняем...' : 'Принять заявку'}
               </button>
             </>
           )}
 
-          {currentStatus === 'В работе у инженера' && (
-            <>
-              <p>
-                Заявка назначена инженеру. Можно приступать к проверке.
-              </p>
-
-              <button
-                className="app-detail-primary"
-                onClick={() => onStatusChange('Диагностика')}
-              >
-                Начать диагностику
-              </button>
-            </>
-          )}
-
-          {currentStatus === 'Диагностика' && (
+          {statusInfo === 0 && isMyEngineerAssignment && (
             <div className="app-detail-form">
-              <label htmlFor="diagnosis-result">
-                Результат диагностики
-              </label>
-
+              <p>Заявка закреплена за тобой. Внеси результат диагностики.</p>
+              <label htmlFor="diagnosis-result">Результат диагностики</label>
               <textarea
                 id="diagnosis-result"
                 value={diagnosis}
-                onChange={(event) => {
-                  onDiagnosisChange(event.target.value)
-                  setError('')
-                }}
+                onChange={(event) => onDiagnosisChange(event.target.value)}
                 placeholder="Опиши обнаруженную неисправность, результаты проверки и рекомендации по ремонту..."
                 rows={5}
               />
-
               <p className="app-detail-hint">
-                Укажите, что неисправно и какие работы необходимы.
+                После отправки диагностики заявка станет доступна мастерам.
               </p>
-
-              {error && (
-                <p className="app-detail-error">{error}</p>
-              )}
-
               <button
                 className="app-detail-primary"
-                onClick={finishDiagnosis}
+                disabled={busy || !diagnosis.trim()}
+                onClick={() =>
+                  void runAction('diagnose', {
+                    diagnostic_info: diagnosis.trim(),
+                  })
+                }
               >
-                Завершить диагностику
+                {busy ? 'Отправляем...' : 'Завершить диагностику'}
               </button>
             </div>
           )}
 
-          {currentStatus === 'Ожидание ремонта' && (
-            <p className="app-detail-success">
-              Диагностика завершена. Заявка ожидает ремонта.
+          {statusInfo === 0 && assigneeEngineerId !== null && !isMyEngineerAssignment && (
+            <p className="app-detail-muted">
+              Заявка уже закреплена за другим инженером.
             </p>
+          )}
+
+          {statusInfo === 1 && (
+            <p className="app-detail-success">
+              Диагностика завершена. Заявка передана на этап ремонта.
+            </p>
+          )}
+
+          {statusInfo === 2 && assigneeEngineerId === null && (
+            <>
+              <p>Ремонт завершён. Инженер должен принять заявку на проверку.</p>
+              <button
+                className="app-detail-primary"
+                disabled={busy}
+                onClick={() => void runAction('take-check')}
+              >
+                {busy ? 'Выполняем...' : 'Принять на проверку'}
+              </button>
+            </>
+          )}
+
+          {statusInfo === 2 && isMyEngineerAssignment && (
+            <div className="app-detail-form">
+              <p>Проверь результат ремонта.</p>
+              <label className="app-detail-check-option">
+                <input
+                  type="radio"
+                  checked={checkPassed}
+                  onChange={() => setCheckPassed(true)}
+                />
+                Проверка пройдена
+              </label>
+              <label className="app-detail-check-option">
+                <input
+                  type="radio"
+                  checked={!checkPassed}
+                  onChange={() => setCheckPassed(false)}
+                />
+                Проверка не пройдена
+              </label>
+              {!checkPassed && (
+                <>
+                  <label htmlFor="check-comment">Что необходимо исправить</label>
+                  <textarea
+                    id="check-comment"
+                    value={checkComment}
+                    onChange={(event) => setCheckComment(event.target.value)}
+                    rows={4}
+                    placeholder="Опиши, что не так с ремонтом..."
+                  />
+                </>
+              )}
+              <button
+                className="app-detail-primary"
+                disabled={busy || (!checkPassed && !checkComment.trim())}
+                onClick={() =>
+                  void runAction('check', {
+                    passed: checkPassed,
+                    comment: checkPassed ? checkComment.trim() || undefined : checkComment.trim(),
+                  })
+                }
+              >
+                {busy ? 'Сохраняем...' : checkPassed ? 'Подтвердить ремонт' : 'Отправить на повторную диагностику'}
+              </button>
+            </div>
+          )}
+
+          {statusInfo === 2 && assigneeEngineerId !== null && !isMyEngineerAssignment && (
+            <p className="app-detail-muted">
+              Проверка ремонта уже закреплена за другим инженером.
+            </p>
+          )}
+
+          {statusInfo === 3 && (
+            <p className="app-detail-success">
+              Проверка пройдена. Устройство готово к выдаче клиенту.
+            </p>
+          )}
+          {statusInfo === 4 && (
+            <p className="app-detail-success">Устройство уже выдано клиенту. Заявка закрыта.</p>
           )}
         </section>
       )}
 
-      {/* Действия мастера */}
+      {role === 'operator' && (
+        <section className="app-detail-card">
+          <h2>Выдача устройства</h2>
+          {statusInfo === 3 && (
+            <>
+              <p>Проверка инженера пройдена. Устройство можно выдать клиенту.</p>
+              <button
+                className="app-detail-primary"
+                disabled={busy}
+                onClick={() => void runAction('issue')}
+              >
+                {busy ? 'Сохраняем...' : 'Подтвердить выдачу клиенту'}
+              </button>
+            </>
+          )}
+          {statusInfo === 4 && (
+            <p className="app-detail-success">Устройство выдано. Заявка закрыта.</p>
+          )}
+          {statusInfo < 3 && (
+            <p className="app-detail-muted">Выдача станет доступна после завершения ремонта и проверки инженером.</p>
+          )}
+        </section>
+      )}
+
       {role === 'repairer' && (
         <section className="app-detail-card">
           <h2>Работа мастера</h2>
 
-          {currentStatus === 'Ожидание ремонта' && (
+          {statusInfo === 1 && assigneeRepairerId === null && (
             <>
-              <p>
-                Заявка ожидает начала ремонта.
-              </p>
-
+              <p>Диагностика завершена. Можно принять заявку в ремонт.</p>
               <button
                 className="app-detail-primary"
-                onClick={() => onStatusChange('В ремонте')}
+                disabled={busy}
+                onClick={() => void runAction('take-repair')}
               >
-                Взять в ремонт
+                {busy ? 'Выполняем...' : 'Взять в ремонт'}
               </button>
             </>
           )}
 
-          {currentStatus === 'В ремонте' && (
+          {statusInfo === 1 && isMyRepairerAssignment && (
             <>
-              <p>
-                После выполнения ремонта завершите этот этап.
-              </p>
-
+              <p>Заявка закреплена за тобой. После ремонта отметь его завершение.</p>
               <button
                 className="app-detail-primary"
-                onClick={() => onStatusChange('Готово')}
+                disabled={busy}
+                onClick={() => void runAction('repair')}
               >
-                Завершить ремонт
+                {busy ? 'Сохраняем...' : 'Завершить ремонт'}
               </button>
             </>
           )}
 
-          {currentStatus === 'Готово' && (
-            <p className="app-detail-success">
-              Ремонт отмечен как завершённый.
+          {statusInfo === 1 && assigneeRepairerId !== null && !isMyRepairerAssignment && (
+            <p className="app-detail-muted">
+              Заявка уже закреплена за другим мастером.
             </p>
+          )}
+
+          {statusInfo === 2 && (
+            <p className="app-detail-success">
+              Ремонт завершён. Заявка ожидает проверки инженером.
+            </p>
+          )}
+          {statusInfo >= 3 && (
+            <p className="app-detail-success">Работа по заявке завершена.</p>
           )}
         </section>
       )}
 
-      {/* Запчасти, использованные при ремонте */}
-        {role === 'repairer' && (
+      {role === 'repairer' && (
         <RepairPartsPanel
-            stock={stock}
-            usedParts={usedParts}
-            canEdit={canEditParts}
-            onAdd={onAddPart}
-            onRemove={onRemovePart}
+          stock={stock}
+          usedParts={usedParts}
+          canEdit={canEditParts}
+          workCost={workCost}
+          partsCost={partsCost}
+          totalCost={totalCost}
+          onAdd={onAddPart}
+          onRemove={onRemovePart}
         />
-        )}
+      )}
 
-
-      {/* Результат диагностики виден при повторном открытии заявки */}
       <section className="app-detail-card">
         <h2>Результат диагностики</h2>
-
         {diagnosis.trim() ? (
-          <p className="app-detail-diagnosis">
-            {diagnosis}
-          </p>
+          <p className="app-detail-diagnosis">{diagnosis}</p>
         ) : (
-          <p className="app-detail-muted">
-            Результат диагностики пока не заполнен.
-          </p>
+          <p className="app-detail-muted">Результат диагностики пока не заполнен.</p>
         )}
       </section>
 
-      {/* Подсказка о следующем этапе */}
+      {checkResult && (
+        <section className="app-detail-card">
+          <h2>Комментарий по проверке</h2>
+          <p className="app-detail-diagnosis">{checkResult}</p>
+        </section>
+      )}
+
+      {role === 'operator' && (
+        <section className="app-detail-card">
+          <h2>Удаление заявки</h2>
+          {!deleteConfirmation ? (
+            <button className="app-detail-secondary" disabled={busy} onClick={() => setDeleteConfirmation(true)}>
+              Удалить заявку
+            </button>
+          ) : (
+            <div className="app-detail-form">
+              <p>Точно удалить заявку #{application.id}? Это действие нельзя отменить.</p>
+              <div className="app-detail-actions-row">
+                <button className="app-detail-secondary" disabled={busy} onClick={() => setDeleteConfirmation(false)}>Отмена</button>
+                <button className="app-detail-danger" disabled={busy} onClick={() => {
+                  setBusy(true)
+                  setError('')
+                  void onDelete().catch((err) => setError(err instanceof Error ? err.message : 'Не удалось удалить заявку')).finally(() => setBusy(false))
+                }}>{busy ? 'Удаляем...' : 'Да, удалить'}</button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {canRelease && (
+        <section className="app-detail-card">
+          <h2>Управление назначением</h2>
+          <p className="app-detail-muted">
+            Если исполнитель не может продолжить работу, его можно снять с заявки. После этого её сможет принять другой сотрудник.
+          </p>
+          <button
+            className="app-detail-secondary"
+            disabled={busy}
+            onClick={() => void releaseAssignment()}
+          >
+            {busy ? 'Выполняем...' : 'Снять исполнителя с заявки'}
+          </button>
+        </section>
+      )}
+
+      {error && <p className="app-detail-error" role="alert">{error}</p>}
+
       <section className="app-detail-next">
         <span className="app-detail-next-icon">i</span>
-
         <div>
           <strong>Следующий этап</strong>
-          <p>{getNextStep()}</p>
+          <p>{nextStep}</p>
         </div>
       </section>
     </div>

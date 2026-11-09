@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import './EmployeesPage.css'
 
 export type Employee = {
@@ -15,6 +15,7 @@ type EmployeesPageProps = {
   error: string
   onToggleActive: (id: number) => Promise<void>
   onGenerateCode: (id: number) => Promise<string>
+  onCreateEmployee: (FIO: string, role: string) => Promise<string>
 }
 
 const roleNames: Record<string, string> = {
@@ -30,11 +31,38 @@ function EmployeesPage({
   error,
   onToggleActive,
   onGenerateCode,
+  onCreateEmployee,
 }: EmployeesPageProps) {
   const [busyId, setBusyId] = useState<number | null>(null)
   const [notice, setNotice] = useState('')
   const [newCode, setNewCode] = useState('')
   const [codeEmployee, setCodeEmployee] = useState('')
+  const [newEmployeeName, setNewEmployeeName] = useState('')
+  const [newEmployeeRole, setNewEmployeeRole] = useState('operator')
+  const [creating, setCreating] = useState(false)
+
+  async function handleCreateEmployee(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!newEmployeeName.trim()) {
+      setNotice('Укажи ФИО нового сотрудника.')
+      return
+    }
+    setCreating(true)
+    setNotice('')
+    setNewCode('')
+    try {
+      const code = await onCreateEmployee(newEmployeeName.trim(), newEmployeeRole)
+      setNewCode(code)
+      setCodeEmployee(newEmployeeName.trim())
+      setNewEmployeeName('')
+      setNewEmployeeRole('operator')
+      setNotice('Сотрудник добавлен. Сохрани код доступа и передай его сотруднику.')
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Не удалось создать сотрудника')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   async function handleGenerateCode(employee: Employee) {
     setBusyId(employee.id)
@@ -117,6 +145,31 @@ function EmployeesPage({
             </strong>
           </div>
         </div>
+
+        <form className="employee-card employee-create-form" onSubmit={handleCreateEmployee}>
+          <h2>Добавить сотрудника</h2>
+          <label>
+            ФИО
+            <input
+              value={newEmployeeName}
+              onChange={(event) => setNewEmployeeName(event.target.value)}
+              placeholder="Иванов Иван Иванович"
+              maxLength={255}
+              required
+            />
+          </label>
+          <label>
+            Должность
+            <select value={newEmployeeRole} onChange={(event) => setNewEmployeeRole(event.target.value)}>
+              <option value="operator">Оператор</option>
+              <option value="engineer">Инженер</option>
+              <option value="repairer">Мастер</option>
+            </select>
+          </label>
+          <button className="secondary-button" type="submit" disabled={creating}>
+            {creating ? 'Создаём...' : 'Создать сотрудника и получить код'}
+          </button>
+        </form>
 
         <h2>Список сотрудников</h2>
 

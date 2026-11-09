@@ -1,8 +1,4 @@
 import { useEffect, useState } from 'react'
-import {
-  clients,
-  stockParts,
-} from './mockData'
 
 import type { UsedPart } from './RepairPartsPanel'
 import './App.css'
@@ -23,6 +19,7 @@ import { apiRequest } from './api'
 import StockPage from './StockPage'
 //доставка
 import DeliveryPage from './DeliveryPage'
+import ClientsPage from './ClientsPage'
 
 function App() {
   // =========================
@@ -72,11 +69,6 @@ function App() {
     () => localStorage.getItem('fixpoint_employee_page') || 'home'
   )
 
-  // Временные статусы заявок
-  // Потом это заменю на данные с backend
-  const [applicationStatuses, setApplicationStatuses] =
-    useState<Record<number, string>>({})
-
   // Результаты диагностики храним отдельно для каждой заявки
   const [applicationDiagnoses, setApplicationDiagnoses] =
     useState<Record<number, string>>({})
@@ -90,19 +82,27 @@ function App() {
     status: string
     description?: string
     diagnosticResult?: string
+    statusInfo: number
+    assigneeEngineerId: number | null
+    assigneeRepairerId: number | null
+    checkResult: string
+    source: string
+    parts: UsedPart[]
+    workCost: number
+    partsCost: number
+    totalCost: number
   }
 
   const [applicationList, setApplicationList] = useState<ApplicationItem[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(false)
   const [applicationsError, setApplicationsError] = useState('')
 
-  //локальные копии моковых данных которые можно изменять
-  const [clientList, setClientList] = useState(clients)
-  const [stock, setStock] = useState(stockParts)
-
-  // Запчасти, использованные в каждой заявке
-  const [applicationParts, setApplicationParts] =
-    useState<Record<number, UsedPart[]>>({})
+  const [stock, setStock] = useState<{
+    id: number
+    name: string
+    quantity: number
+    price: number
+  }[]>([])
 
   // --- Авторизация клиентов ---
   const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>([])
@@ -150,154 +150,177 @@ function App() {
 
   //поля создания заявок оператором
   const [newApplicationClient, setNewApplicationClient] = useState('')
+  const [newApplicationPhone, setNewApplicationPhone] = useState('')
+  const [newApplicationEmail, setNewApplicationEmail] = useState('')
   const [newApplicationDevice, setNewApplicationDevice] = useState('')
+  const [newApplicationModel, setNewApplicationModel] = useState('')
+  const [newApplicationInfo, setNewApplicationInfo] = useState('')
+  const [newApplicationAddress, setNewApplicationAddress] = useState('')
+  const [isCreatingApplication, setIsCreatingApplication] = useState(false)
 
-  //поля управления складом
-  const [stockSearch, setStockSearch] = useState('')
-  const [newPartName, setNewPartName] = useState('')
-  const [newPartQuantity, setNewPartQuantity] = useState('1')
-  const [newPartPrice, setNewPartPrice] = useState('')
+  // Получаем ID сотрудника из JWT, чтобы показывать действия
+  // только тому, кому сервер назначил заявку.
+  function getEmployeeIdFromToken(token: string): number | null {
+    try {
+      const payloadPart = token.split('.')[1]
+      if (!payloadPart) return null
 
-  // Запчасти: здесь оставлен один комплект обработчиков, без дублирующих объявлений.
-  // Добавить одну единицу запчасти в заявку
-  const handleAddPartToApplication = (
-    applicationId: number,
-    stockPartId: number
-  ) => {
-    const part = stock.find((item) => item.id === stockPartId)
+      const normalized = payloadPart
+        .replace(/-/g, '+')
+        .replace(/_/g, '/')
+      const payload = JSON.parse(atob(normalized))
+      const id = Number(payload.sub)
 
-    if (!part || part.quantity <= 0) {
-      return
+      return Number.isFinite(id) ? id : null
+    } catch {
+      return null
     }
-
-    // Уменьшаем остаток на складе
-    setStock((prev) =>
-      prev.map((item) =>
-        item.id === stockPartId
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      )
-    )
-
-    // Добавляем деталь в заявку или увеличиваем её количество
-    setApplicationParts((prev) => {
-      const currentParts = prev[applicationId] ?? []
-      const existingPart = currentParts.find(
-        (item) => item.stockPartId === stockPartId
-      )
-
-      if (existingPart) {
-        return {
-          ...prev,
-          [applicationId]: currentParts.map((item) =>
-            item.stockPartId === stockPartId
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          ),
-        }
-      }
-
-      const newPart: UsedPart = {
-        stockPartId: part.id,
-        name: part.name,
-        price: part.price,
-        quantity: 1,
-      }
-
-      return {
-        ...prev,
-        [applicationId]: [...currentParts, newPart],
-      }
-    })
   }
 
-  // Убрать одну единицу запчасти из заявки и вернуть её на склад
-  const handleRemovePartFromApplication = (
-    applicationId: number,
-    stockPartId: number
-  ) => {
-    const currentParts = applicationParts[applicationId] ?? []
-    const usedPart = currentParts.find(
-      (item) => item.stockPartId === stockPartId
-    )
+  const employeeId = getEmployeeIdFromToken(employeeToken)
 
-    if (!usedPart) {
+  function currentUserRoleReleasePath(applicationId: number): string {
+    const role = localStorage.getItem('fixpoint_employee_role')
+    if (role === 'engineer') return `/engineer/${applicationId}/release`
+    if (role === 'repairer') return `/repairer/${applicationId}/release`
+    if (role === 'operator') return `/operator/${applicationId}/release`
+    return `/services/${applicationId}/release`
+  }
+
+  // Все изменения этапов выполняются только через API.
+  async function handleApplicationAction(
+    action: 'take-engineer' | 'diagnose' | 'take-repair' | 'repair' | 'take-check' | 'check' | 'issue' | 'release',
+    applicationId: number,
+    data?: { diagnostic_info?: string; passed?: boolean; comment?: string },
+  ) {
+    const routes: Record<typeof action, string> = {
+      'take-engineer': `/engineer/${applicationId}/takeEngineer`,
+      diagnose: `/engineer/${applicationId}/diagnose`,
+      'take-repair': `/repairer/${applicationId}/takeRepair`,
+      repair: `/repairer/${applicationId}/repair`,
+      'take-check': `/engineer/${applicationId}/takeEngineer`,
+      check: `/engineer/${applicationId}/check`,
+      issue: `/operator/${applicationId}/issue`,
+      release: currentUserRoleReleasePath(applicationId),
+    }
+
+    await apiRequest(routes[action], {
+      method: 'POST',
+      body: data,
+      token: employeeToken,
+    })
+
+    await loadApplications()
+  }
+
+  // Запчасти списываются с настоящего склада и привязываются к заявке.
+  async function handleAddPartToApplication(
+    applicationId: number,
+    stockPartId: number,
+  ) {
+    const part = stock.find((item) => item.id === stockPartId)
+    if (!part) throw new Error('Запчасть не найдена на складе')
+    if (part.quantity <= 0) throw new Error('Этой запчасти нет в наличии')
+
+    await apiRequest(`/repairer/${applicationId}/parts`, {
+      method: 'POST',
+      body: { name: part.name, quantity: 1 },
+      token: employeeToken,
+    })
+
+    await Promise.all([loadApplications(), loadRepairerStock()])
+  }
+
+  // Удаляем именно запись запчасти из заявки по её ID.
+  async function handleRemovePartFromApplication(
+    applicationId: number,
+    partId: number,
+  ) {
+    await apiRequest(`/repairer/${applicationId}/parts/${partId}`, {
+      method: 'DELETE',
+      token: employeeToken,
+    })
+
+    await Promise.all([loadApplications(), loadRepairerStock()])
+  }
+
+  async function loadRepairerStock() {
+    if (!employeeToken || localStorage.getItem('fixpoint_employee_role') !== 'repairer') {
       return
     }
 
-    setStock((prev) =>
-      prev.map((item) =>
-        item.id === stockPartId
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      )
-    )
+    const data = await apiRequest<{
+      id: number
+      name: string
+      price: number
+      quantity: number
+    }[]>('/repairer/stock', { token: employeeToken })
 
-    setApplicationParts((prev) => {
-      const updatedParts = (prev[applicationId] ?? [])
-        .map((item) =>
-          item.stockPartId === stockPartId
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-
-      return {
-        ...prev,
-        [applicationId]: updatedParts,
-      }
-    })
+    setStock(data)
   }
 
   // =========================
   // ВХОД
   // =========================
 
-  // создание тестовой заявки оператором
-  const handleAddApplication = () => {
-    if (!newApplicationClient.trim() || !newApplicationDevice.trim()) {
-      setError('Заполни имя клиента и устройство')
+  // Создание настоящей заявки оператором через API.
+  const handleAddApplication = async () => {
+    if (
+      !newApplicationClient.trim() ||
+      !newApplicationPhone.trim() ||
+      !newApplicationEmail.trim() ||
+      !newApplicationDevice.trim() ||
+      !newApplicationModel.trim() ||
+      !newApplicationInfo.trim() ||
+      !newApplicationAddress.trim()
+    ) {
+      setError('Заполни все поля заявки')
       return
     }
 
-    const nextId =
-      Math.max(0, ...applicationList.map((item) => item.id)) + 1
-
-    const newApplication = {
-      id: nextId,
-      client: newApplicationClient.trim(),
-      device: newApplicationDevice.trim(),
-      status: 'Новая',
+    if (!employeeToken) {
+      setError('Сессия сотрудника не найдена. Войди в аккаунт заново.')
+      return
     }
 
-    // добавляем заявку в список
-    setApplicationList((prev) => [newApplication, ...prev])
-
-    // проверка существует ли уже такой клиент
-    const clientExists = clientList.some(
-      (client) =>
-        client.name.toLowerCase() === newApplication.client.toLowerCase()
-    )
-
-    // добавить клиента если нет, но не сохр пока
-    if (!clientExists) {
-      const nextClientId =
-        Math.max(0, ...clientList.map((client) => client.id)) + 1
-
-      setClientList((prev) => [
-        ...prev,
-        {
-          id: nextClientId,
-          name: newApplication.client,
-          phone: 'Не указан',
-        },
-      ])
-    }
-
-    setNewApplicationClient('')
-    setNewApplicationDevice('')
+    setIsCreatingApplication(true)
     setError('')
-    setActivePage('applications')
+
+    try {
+      await apiRequest('/operator/add_application', {
+        method: 'POST',
+        token: employeeToken,
+        body: {
+          FIO: newApplicationClient.trim(),
+          number: newApplicationPhone.trim(),
+          email: newApplicationEmail.trim(),
+          device: newApplicationDevice.trim(),
+          device_model: newApplicationModel.trim(),
+          info: newApplicationInfo.trim(),
+          address: newApplicationAddress.trim(),
+        },
+      })
+
+      // После успешного ответа сервера обновляем список из базы данных.
+      await loadApplications()
+
+      setNewApplicationClient('')
+      setNewApplicationPhone('')
+      setNewApplicationEmail('')
+      setNewApplicationDevice('')
+      setNewApplicationModel('')
+      setNewApplicationInfo('')
+      setNewApplicationAddress('')
+      setError('')
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Не удалось создать заявку. Попробуй ещё раз.'
+      )
+    } finally {
+      setIsCreatingApplication(false)
+    }
   }
 
 
@@ -305,31 +328,27 @@ function App() {
   // ЗАГРУЗКА ЗАЯВОК С BACKEND
   // =========================
 
-  // Преобразуем статус сервера в статус, который понимает интерфейс
-  function normalizeApplicationStatus(status: string): string {
-    const value = status.toLowerCase()
-
-    if (value.includes('создана') || value.includes('ожидание диагностики')) {
-      return 'Новая'
+  // Этап заявки берём из status_info, а не пытаемся угадать по тексту статуса.
+  function getApplicationDisplayStatus(item: {
+    status_info: number
+    assignee_engineer_id?: number | null
+    assignee_repairer_id?: number | null
+    check_result?: string | null
+  }): string {
+    switch (item.status_info) {
+      case -3: return 'Ожидает курьера'
+      case -2: return 'Курьер выехал'
+      case -1: return 'Курьер забрал посылку'
+      case 0:
+        if (item.check_result) return 'Повторная диагностика'
+        return item.assignee_engineer_id ? 'В работе у инженера' : 'Новая'
+      case 1:
+        return item.assignee_repairer_id ? 'В ремонте' : 'Ожидание ремонта'
+      case 2: return 'Ожидает проверки'
+      case 3: return 'Готово к выдаче'
+      case 4: return 'Выдано клиенту'
+      default: return 'Неизвестный этап'
     }
-
-    if (value.includes('диагностик')) {
-      return 'Диагностика'
-    }
-
-    if (value.includes('ожидание ремонта')) {
-      return 'Ожидание ремонта'
-    }
-
-    if (value.includes('ремонт')) {
-      return 'В ремонте'
-    }
-
-    if (value.includes('готов')) {
-      return 'Готово'
-    }
-
-    return status
   }
 
   async function loadApplications() {
@@ -339,59 +358,76 @@ function App() {
     setApplicationsError('')
 
     try {
-      const data = await apiRequest<
-        {
+      const role = localStorage.getItem('fixpoint_employee_role') || ''
+      const endpointByRole: Record<string, string> = {
+        engineer: '/engineer/get_applications',
+        repairer: '/repairer/get_applications',
+        operator: '/operator/get_applications',
+        admin: '/services/get_applications',
+        worker: '/services/get_applications',
+      }
+      const endpoint = endpointByRole[role] || '/services/get_applications'
+
+      const data = await apiRequest<{
+        id: number
+        client_id: number
+        FIO: string
+        device: string
+        device_model?: string | null
+        info?: string | null
+        status: string
+        status_info: number
+        diagnostic_result?: string | null
+        assignee_engineer_id?: number | null
+        assignee_repairer_id?: number | null
+        check_result?: string | null
+        source: string
+        parts?: {
           id: number
-          client_id: number
-          FIO: string
-          device: string
-          device_model?: string | null
-          info?: string | null
-          status: string
-          diagnostic_result?: string | null
+          stock_part_id: number | null
+          name: string
+          price: number
+          quantity: number
         }[]
-      >('/services/get_applications', {
-        token: employeeToken,
-      })
+        work_cost?: number
+        parts_cost?: number
+        total_cost?: number
+      }[]>(endpoint, { token: employeeToken })
 
-      setApplicationList(
-        data.map((item) => ({
-          id: item.id,
-          client: item.FIO,
-          clientId: item.client_id,
-          device: [item.device, item.device_model]
-            .filter(Boolean)
-            .join(' — '),
-          status: normalizeApplicationStatus(item.status),
-          description: item.info ?? '',
-          diagnosticResult: item.diagnostic_result ?? '',
-        }))
-      )
+      const mapped = data.map((item) => ({
+        id: item.id,
+        client: item.FIO,
+        clientId: item.client_id,
+        device: [item.device, item.device_model]
+          .filter(Boolean)
+          .join(' — '),
+        status: getApplicationDisplayStatus(item),
+        description: item.info ?? '',
+        diagnosticResult: item.diagnostic_result ?? '',
+        statusInfo: item.status_info,
+        assigneeEngineerId: item.assignee_engineer_id ?? null,
+        assigneeRepairerId: item.assignee_repairer_id ?? null,
+        checkResult: item.check_result ?? '',
+        source: item.source,
+        parts: (item.parts ?? []).map((part) => ({
+          id: part.id,
+          stockPartId: part.stock_part_id,
+          name: part.name,
+          price: Number(part.price),
+          quantity: part.quantity,
+        })),
+        workCost: Number(item.work_cost ?? 5000),
+        partsCost: Number(item.parts_cost ?? 0),
+        totalCost: Number(item.total_cost ?? 0),
+      }))
 
-      // Обновляем список клиентов по данным заявок
-      const uniqueClients = new Map<
-        number,
-        { id: number; name: string; phone: string }
-      >()
-
-      // Телефоны можно будет добавить отдельно, когда подключим
-      // полноценную загрузку клиентов из API.
-      data.forEach((item) => {
-        if (!uniqueClients.has(item.client_id)) {
-          uniqueClients.set(item.client_id, {
-            id: item.client_id,
-            name: item.FIO,
-            phone: 'Не указан',
-          })
-        }
-      })
-
-      setClientList(Array.from(uniqueClients.values()))
+      setApplicationList(mapped)
+      if (role === 'repairer') {
+        await loadRepairerStock()
+      }
     } catch (err) {
       setApplicationsError(
-        err instanceof Error
-          ? err.message
-          : 'Не удалось загрузить заявки'
+        err instanceof Error ? err.message : 'Не удалось загрузить заявки',
       )
     } finally {
       setApplicationsLoading(false)
@@ -517,6 +553,23 @@ function App() {
     }
   }
 
+  // Создание нового сотрудника и получение одноразового кода доступа.
+  async function handleCreateEmployee(FIO: string, role: string): Promise<string> {
+    const result = await apiRequest<{
+      id: number
+      code: string
+      role: string
+      is_active: boolean
+    }>('/services/access-codes', {
+      method: 'POST',
+      body: { FIO, role },
+      token: employeeToken,
+    })
+
+    await loadEmployees()
+    return result.code
+  }
+
   // Блокировка или повторная активация сотрудника
   async function handleToggleEmployeeActive(id: number) {
     const employee = employeeList.find((item) => item.id === id)
@@ -603,8 +656,7 @@ function App() {
         return null
       }
 
-      const currentStatus =
-        applicationStatuses[application.id] ?? application.status
+      const currentStatus = application.status
 
       return (
         <main className="dashboard">
@@ -636,11 +688,27 @@ function App() {
                   [application.id]: value,
                 }))
               }}
-              onStatusChange={(status) => {
-                setApplicationStatuses((prev) => ({
-                  ...prev,
-                  [application.id]: status,
-                }))
+              employeeId={employeeId}
+              statusInfo={application.statusInfo}
+              assigneeEngineerId={application.assigneeEngineerId}
+              assigneeRepairerId={application.assigneeRepairerId}
+              checkResult={application.checkResult}
+              workCost={application.workCost}
+              partsCost={application.partsCost}
+              totalCost={application.totalCost}
+              onAction={(action, data) =>
+                handleApplicationAction(action, application.id, data)
+              }
+              onRelease={async () => {
+                await handleApplicationAction('release', application.id)
+              }}
+              onDelete={async () => {
+                await apiRequest(`/operator/delete_applications/${application.id}`, {
+                  method: 'DELETE',
+                  token: employeeToken,
+                })
+                await loadApplications()
+                setSelectedApplication(null)
               }}
               onBack={() => {
                 setSelectedApplication(null)
@@ -648,13 +716,17 @@ function App() {
                 setError('')
               }}
               stock={stock}
-              usedParts={applicationParts[application.id] ?? []}
-              canEditParts={currentStatus === 'В ремонте'}
+              usedParts={application.parts}
+              canEditParts={
+                currentUser.role === 'repairer' &&
+                application.statusInfo === 1 &&
+                application.assigneeRepairerId === employeeId
+              }
               onAddPart={(stockPartId) =>
                 handleAddPartToApplication(application.id, stockPartId)
               }
-              onRemovePart={(stockPartId) =>
-                handleRemovePartFromApplication(application.id, stockPartId)
+              onRemovePart={(partId) =>
+                handleRemovePartFromApplication(application.id, partId)
               }
             />
           </section>
@@ -669,7 +741,6 @@ function App() {
     if (activePage === 'clients' && currentUser.role === 'operator') {
       return (
         <main className="dashboard">
-          {/* ОБЩЕЕ БОКОВОЕ МЕНЮ */}
           <Sidebar
             role={currentUser.role}
             activePage={activePage}
@@ -681,53 +752,13 @@ function App() {
             }}
             onLogout={handleLogout}
           />
-
-          <section className="dashboard-content">
-            <header className="dashboard-header">
-              <div>
-                <p className="dashboard-label">ОПЕРАТОР</p>
-                <h1>Клиенты</h1>
-              </div>
-            </header>
-
-            <section className="applications-section">
-              <h2>Список клиентов</h2>
-
-              {applicationsLoading && (
-                <p>Загружаем заявки...</p>
-              )}
-
-              {applicationsError && (
-                <p className="login-error">
-                  Не удалось загрузить заявки: {applicationsError}
-                </p>
-              )}
-
-              <div className="applications-list">
-                {clientList.map((client) => {
-                  const clientApplications = applicationList.filter(
-                    (application) => application.client === client.name
-                  )
-
-                  return (
-                    <div className="application-card" key={client.id}>
-                      <div className="application-number">
-                        #{client.id}
-                      </div>
-
-                      <div className="application-info">
-                        <strong>{client.name}</strong>
-                        <span>{client.phone}</span>
-                        <span>
-                          Заявок: {clientApplications.length}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          </section>
+          <ClientsPage
+            token={employeeToken}
+            onOpenApplication={(id: number) => {
+              setSelectedApplication(id)
+              setActivePage('applications')
+            }}
+          />
         </main>
       )
     }
@@ -842,14 +873,32 @@ function App() {
                   <h2>Создать заявку</h2>
 
                   <label>
-                    Клиент
+                    ФИО клиента
                     <input
                       type="text"
-                      placeholder="Имя клиента"
+                      placeholder="Иванов Иван Иванович"
                       value={newApplicationClient}
-                      onChange={(event) =>
-                        setNewApplicationClient(event.target.value)
-                      }
+                      onChange={(event) => setNewApplicationClient(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Телефон
+                    <input
+                      type="tel"
+                      placeholder="+7 999 123-45-67"
+                      value={newApplicationPhone}
+                      onChange={(event) => setNewApplicationPhone(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Email
+                    <input
+                      type="email"
+                      placeholder="client@example.com"
+                      value={newApplicationEmail}
+                      onChange={(event) => setNewApplicationEmail(event.target.value)}
                     />
                   </label>
 
@@ -857,19 +906,48 @@ function App() {
                     Устройство
                     <input
                       type="text"
-                      placeholder="Например, ноутбук ASUS"
+                      placeholder="Ноутбук"
                       value={newApplicationDevice}
-                      onChange={(event) =>
-                        setNewApplicationDevice(event.target.value)
-                      }
+                      onChange={(event) => setNewApplicationDevice(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Модель устройства
+                    <input
+                      type="text"
+                      placeholder="ASUS VivoBook 15"
+                      value={newApplicationModel}
+                      onChange={(event) => setNewApplicationModel(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Описание проблемы
+                    <textarea
+                      placeholder="Опиши неисправность со слов клиента"
+                      value={newApplicationInfo}
+                      onChange={(event) => setNewApplicationInfo(event.target.value)}
+                      rows={3}
+                    />
+                  </label>
+
+                  <label>
+                    Адрес
+                    <input
+                      type="text"
+                      placeholder="Адрес клиента или сервисного центра"
+                      value={newApplicationAddress}
+                      onChange={(event) => setNewApplicationAddress(event.target.value)}
                     />
                   </label>
 
                   <button
                     className="login-button"
                     onClick={handleAddApplication}
+                    disabled={isCreatingApplication}
                   >
-                    Создать заявку
+                    {isCreatingApplication ? 'Создаём заявку...' : 'Создать заявку'}
                   </button>
 
                   {error && <p className="login-error">{error}</p>}
@@ -889,8 +967,7 @@ function App() {
 
               <div className="applications-list">
                 {applicationList.map((application) => {
-                  const currentStatus =
-                    applicationStatuses[application.id] ?? application.status
+                  const currentStatus = application.status
 
                   return (
                     <div
@@ -946,6 +1023,7 @@ function App() {
             error={employeesError}
             onToggleActive={handleToggleEmployeeActive}
             onGenerateCode={handleGenerateEmployeeCode}
+            onCreateEmployee={handleCreateEmployee}
           />
         </main>
       )
@@ -996,22 +1074,22 @@ function App() {
           <section className="stats">
             <div className="stat-card">
               <span>Всего заявок</span>
-              <strong>12</strong>
+              <strong>{applicationList.length}</strong>
             </div>
 
             <div className="stat-card">
               <span>В работе</span>
-              <strong>4</strong>
+              <strong>{applicationList.filter((item) => item.statusInfo === 1 || item.statusInfo === 2).length}</strong>
             </div>
 
             <div className="stat-card">
               <span>На диагностике</span>
-              <strong>3</strong>
+              <strong>{applicationList.filter((item) => item.statusInfo === 0).length}</strong>
             </div>
 
             <div className="stat-card">
               <span>Готово</span>
-              <strong>5</strong>
+              <strong>{applicationList.filter((item) => item.statusInfo === 3 || item.statusInfo === 4).length}</strong>
             </div>
           </section>
 
@@ -1046,8 +1124,7 @@ function App() {
 
             <div className="applications-list">
               {applicationList.map((application) => {
-                const currentStatus =
-                  applicationStatuses[application.id] ?? application.status
+                const currentStatus = application.status
 
                 return (
                   <div
