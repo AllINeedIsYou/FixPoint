@@ -1,23 +1,32 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Nunito:wght@700;800;900;1000&display=swap');
 
+/* ==================================================
+   ОСНОВНЫЕ НАСТРОЙКИ СТРАНИЦЫ
+   тута можно менять общие цвета и шрифт всего сайта
+   ================================================== */
+
 .fp-home {
-  --blue: #3979f6;
-  --blue-dark: #245bd0;
-  --purple: #a16bfa;
-  --ink: #192945;
-  --muted: #8491a7;
-  --line: #e8edf6;
+  --blue: #165be4;       /* основной синий цвет */
+  --blue-dark: #245bd0;  /* тёмный синий при наведении */
+  --purple: #a16bfa;     /* фиолетовый акцент */
+  --ink: #192945;        /* основной цвет текста */
+  --muted: #8491a7;      /* второстепенный текст */
+  --line: #e8edf6;       /* цвет границ */
 
   width: 100%;
   overflow: hidden;
-  background: #f7f9fd;
+  background: #f7f9fd;   /* общий фон страницы */
   color: var(--ink);
   font-family: 'DM Sans', sans-serif;
 }
 
+/* единый расчёт размеров элементов */
+
 .fp-home * {
   box-sizing: border-box;
 }
+
+/* общие настройки кнопок и ссылок */
 
 .fp-home button,
 .fp-home a {
@@ -33,31 +42,40 @@
   text-decoration: none;
 }
 
+/* подсветка элементов при переходе с клавиатуры */
+
 .fp-home button:focus-visible,
 .fp-home a:focus-visible {
   outline: 3px solid var(--purple);
   outline-offset: 4px;
 }
 
-/* шапка */
+/* ==================================================
+   1. ШАПКА САЙТА
+   Логотип, навигация и кнопка входа сотрудника
+   ================================================== */
+
+/* вся верхняя панель */
 
 .fp-header {
   width: min(1480px, calc(100% - 80px));
-  min-height: 78px;
+  min-height: 78px; /* высота шапки */
   margin: 22px auto 0;
   padding: 10px 13px 10px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 25px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(191, 150, 219, 0.88);
   border: 1px solid rgba(226, 234, 247, 0.9);
-  border-radius: 20px;
+  border-radius: 20px; /* скругление углов */
   box-shadow: 0 12px 40px rgba(37, 67, 119, 0.045);
   position: relative;
   z-index: 5;
   backdrop-filter: blur(16px);
 }
+
+/* логотип в шапке и подвале */
 
 .fp-logo,
 .fp-footer-logo {
@@ -65,11 +83,13 @@
   align-items: center;
   gap: 10px;
   font-family: 'Nunito', sans-serif;
-  font-size: 25px;
+  font-size: 25px; /* размер надписи FixPoint */
   font-weight: 1000;
   letter-spacing: -1px;
   white-space: nowrap;
 }
+
+/* картинка логотипа в шапке */
 
 .fp-logo img {
   width: 50px;
@@ -77,36 +97,42 @@
   object-fit: contain;
 }
 
+/* ссылки навигации */
+
 .fp-nav,
 .fp-footer-nav {
   display: flex;
   align-items: center;
-  gap: 34px;
+  gap: 34px; /* расстояние между ссылками */
 }
 
 .fp-nav a {
-  color: #69778e;
-  font-size: 12px;
+  color: #6b6de3;
+  font-size: 15px;
   font-weight: 800;
   transition: color 0.2s ease;
 }
+
+/* цвет ссылок при наведении */
 
 .fp-nav a:hover,
 .fp-footer-nav a:hover {
   color: var(--blue);
 }
 
+/* кнопка входа сотрудника */
+
 .fp-employee {
-  min-height: 48px;
-  padding: 0 17px;
+  min-height: 38px;
+  padding: 0 15px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
   background: #f2f6ff;
   border: 1px solid #e1eaff;
   border-radius: 14px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   transition: 0.2s ease;
 }
@@ -116,6 +142,8 @@
   transform: translateY(-2px);
 }
 
+/* зелёная точка возле кнопки входа */
+
 .fp-employee-dot {
   width: 8px;
   height: 8px;
@@ -124,12 +152,17 @@
   box-shadow: 0 0 0 4px rgba(98, 214, 157, 0.14);
 }
 
+/* стрелочки */
+
 .fp-arrow {
   color: var(--blue);
   font-size: 17px;
 }
 
-/* первый экран */
+/* ==================================================
+   2. ПЕРВЫЙ ЭКРАН
+   Большая надпись FIXPOINT и приветственный текстус
+   ================================================== */
 
 .fp-hero {
   width: min(1480px, calc(100% - 80px));
@@ -141,6 +174,8 @@
   border-radius: 22px;
   position: relative;
 }
+
+/* маленькие подписи сверху и снизу первого экрана */
 
 .fp-hero-meta,
 .fp-hero-bottom {
@@ -158,9 +193,11 @@
   color: #687994;
 }
 
+/* большая надпись FIXPOINT */
+
 .fp-wordmark {
   width: 100%;
-  margin: 12px 0 5px;
+  margin: 30px 0 5px;
   position: relative;
 }
 
@@ -168,14 +205,16 @@
   margin: 0;
   color: var(--blue);
   font-family: 'Nunito', sans-serif;
-  font-size: clamp(125px, 19vw, 285px);
-  line-height: 0.9;
+  font-size: clamp(125px, 19vw, 285px); /* размер большой надписи */
+  line-height: 0.8;
   font-weight: 1000;
-  letter-spacing: -0.105em;
+  letter-spacing: -0.105em; /* расстояние между буквами */
   text-align: center;
   white-space: nowrap;
   text-shadow: 0 9px 0 #eaf0ff;
 }
+
+/* декоративная звёздочка возле надписи */
 
 .fp-wordmark-star {
   position: absolute;
@@ -185,6 +224,8 @@
   font-size: clamp(35px, 5vw, 70px);
   animation: fp-spin 18s linear infinite;
 }
+
+/* маленькая декоративная подпись */
 
 .fp-wordmark-note {
   position: absolute;
@@ -198,20 +239,26 @@
   transform: rotate(-7deg);
 }
 
+/* расположение текста и иллюстрации первого экрана */
+
 .fp-hero-main {
   min-height: 440px;
   margin-top: 28px;
   display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
+  grid-template-columns: 0.9fr 1.1fr; /* соотношение ширины колонок */
   align-items: stretch;
   gap: 28px;
 }
+
+/* левая часть первого экрана с текстом */
 
 .fp-hero-copy {
   padding: 35px 0 20px 12px;
   position: relative;
   z-index: 2;
 }
+
+/* маленькая подпись над заголовком */
 
 .fp-overline {
   display: flex;
@@ -234,6 +281,8 @@
   background: #d9e2f1;
 }
 
+/* главный заголовок первого экрана */
+
 .fp-hero-copy h2 {
   margin: 26px 0 17px;
   font-family: 'Nunito', sans-serif;
@@ -243,9 +292,13 @@
   font-weight: 1000;
 }
 
+/* выделенное слово в заголовке */
+
 .fp-hero-copy h2 span {
   color: var(--blue);
 }
+
+/* описание под заголовком */
 
 .fp-hero-copy > p {
   max-width: 390px;
@@ -255,6 +308,8 @@
   line-height: 1.9;
 }
 
+/* две кнопки первого экрана */
+
 .fp-hero-buttons {
   margin-top: 29px;
   display: flex;
@@ -262,6 +317,8 @@
   flex-wrap: wrap;
   gap: 13px;
 }
+
+/* основная синяя кнопка */
 
 .fp-button-primary,
 .fp-contact-button {
@@ -281,6 +338,8 @@
   transition: 0.25s ease;
 }
 
+/* эффект основной кнопки при наведении */
+
 .fp-button-primary:hover,
 .fp-contact-button:hover {
   background: var(--blue-dark);
@@ -292,6 +351,8 @@
 .fp-contact-button span {
   font-size: 19px;
 }
+
+/* вторая, текстовая кнопка */
 
 .fp-button-link {
   min-height: 56px;
@@ -316,6 +377,8 @@
   font-size: 17px;
 }
 
+/* подпись под кнопками */
+
 .fp-hero-footnote {
   margin-top: 48px;
   display: flex;
@@ -332,7 +395,12 @@
   font-size: 18px;
 }
 
-/* иллюстрация первого экрана */
+/* ==================================================
+   3. ИЛЛЮСТРАЦИЯ ПЕРВОГО ЭКРАНА
+   Фиксик, фон, орбиты, звёздочки и плашка
+   ================================================== */
+
+/* область с персонажем */
 
 .fp-hero-art {
   min-height: 440px;
@@ -349,6 +417,8 @@
     linear-gradient(135deg, #f0f5ff 0%, #e8efff 55%, #f4efff 100%);
 }
 
+/* сетка на фоне иллюстрации */
+
 .fp-art-grid {
   position: absolute;
   inset: 0;
@@ -361,6 +431,8 @@
   mask-image: linear-gradient(to bottom, black, transparent);
 }
 
+/* первая окружность на фоне */
+
 .fp-art-orbit {
   position: absolute;
   width: 350px;
@@ -369,12 +441,16 @@
   border-radius: 50%;
 }
 
+/* вторая, пунктирная окружность */
+
 .fp-orbit-two {
   width: 430px;
   height: 430px;
   border-style: dashed;
   border-color: rgba(161, 107, 250, 0.2);
 }
+
+/* персонаж Фикси - здесь меняется его размер */
 
 .fp-fixi {
   width: 100%;
@@ -386,6 +462,8 @@
   animation: fp-float 4.5s ease-in-out infinite;
   filter: drop-shadow(0 18px 20px rgba(53, 85, 145, 0.13));
 }
+
+/* декоративные звёздочки вокруг персонажа */
 
 .fp-art-spark {
   position: absolute;
@@ -406,6 +484,8 @@
   font-size: 27px;
 }
 
+/* маленькие надписи на фоне */
+
 .fp-art-label,
 .fp-art-number {
   position: absolute;
@@ -425,6 +505,8 @@
   left: 8%;
 }
 
+/* белая информационная плашка внизу картинки */
+
 .fp-art-sticker {
   position: absolute;
   right: 6%;
@@ -442,7 +524,7 @@
 
 .fp-art-sticker > span {
   color: var(--purple);
-  font-size: 23px;
+  font-size: 25px;
 }
 
 .fp-art-sticker strong,
@@ -460,6 +542,8 @@
   font-size: 9px;
 }
 
+/* нижняя строка первого экрана */
+
 .fp-hero-bottom {
   margin-top: 23px;
   padding-top: 16px;
@@ -471,7 +555,10 @@
   color: var(--blue);
 }
 
-/* бегущая строка */
+/* ==================================================
+   4. БЕГУЩАЯ СТРОКА
+   Синяя полоса с повторяющимся текстом
+   ================================================== */
 
 .fp-marquee {
   margin: 37px 0 75px;
@@ -485,7 +572,7 @@
 .fp-marquee-track {
   width: max-content;
   display: flex;
-  animation: fp-marquee 30s linear infinite;
+  animation: fp-marquee 30s linear infinite; /* скорость движения */
 }
 
 .fp-marquee-track > span {
@@ -503,12 +590,17 @@
   font-style: normal;
 }
 
-/* общие секции */
+/* ==================================================
+   5. ОБЩИЕ НАСТРОЙКИ СЕКЦИЙ
+   Ширина, заголовки и подписи разделов
+   ================================================== */
 
 .fp-section {
   width: min(1300px, calc(100% - 100px));
   margin: 0 auto;
 }
+
+/* заголовок секции и текст справа от него */
 
 .fp-section-top {
   margin-bottom: 36px;
@@ -518,6 +610,8 @@
   gap: 25px;
 }
 
+/* маленькая фиолетовая подпись над заголовком */
+
 .fp-eyebrow {
   display: block;
   color: var(--purple);
@@ -525,6 +619,8 @@
   font-weight: 900;
   letter-spacing: 1.7px;
 }
+
+/* большие заголовки секций */
 
 .fp-section-top h2 {
   margin: 14px 0 0;
@@ -539,6 +635,8 @@
   color: var(--blue);
 }
 
+/* описание рядом с заголовком секции */
+
 .fp-section-top > p {
   margin: 0 0 5px;
   color: var(--muted);
@@ -546,17 +644,25 @@
   line-height: 1.8;
 }
 
-/* карточки услуг */
+
+/* ==================================================
+   6. КАРТОЧКИ УСЛУГ
+   Карточки, персонажи Фикси, иконки и нижняя плашка
+   ================================================== */
 
 .fp-services {
   padding-bottom: 95px;
 }
+
+/* расположение трёх карточек */
 
 .fp-service-grid {
   display: grid;
   grid-template-columns: 1.05fr 1fr 0.95fr;
   gap: 16px;
 }
+
+/* общая карточка услуги */
 
 .fp-service-card {
   min-height: 325px;
@@ -571,24 +677,34 @@
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+/* эффект при наведении */
+
 .fp-service-card:hover {
   transform: translateY(-7px);
   box-shadow: 0 17px 35px rgba(43, 72, 126, 0.09);
 }
 
+/* фон первой карточки */
+
 .fp-service-card-main {
   background: #fff;
 }
+
+/* фон второй карточки */
 
 .fp-service-card-blue {
   background: #eaf2ff;
   border-color: #e0eaff;
 }
 
+/* фон третьей карточки */
+
 .fp-service-card-purple {
   background: #f1ebff;
   border-color: #e9dfff;
 }
+
+/* верхняя строка с номером услуги и иконкой */
 
 .fp-service-top {
   display: flex;
@@ -598,7 +714,11 @@
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 1.2px;
+  position: relative;
+  z-index: 2;
 }
+
+/* квадрат с иконкой */
 
 .fp-service-icon {
   width: 39px;
@@ -611,14 +731,34 @@
   font-size: 22px;
 }
 
+/* цвет иконки третьей карточки */
+
 .fp-service-card-purple .fp-service-icon {
   color: var(--purple);
 }
 
-.fp-service-content {
+/* расположение текста и персонажа внутри карточки */
+
+.fp-service-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  flex: 1;
+  min-height: 0;
   position: relative;
-  z-index: 1;
 }
+
+/* текстовая часть карточки */
+
+.fp-service-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* маленькая подпись над названием услуги */
 
 .fp-service-tag {
   color: #8c9ab0;
@@ -627,13 +767,17 @@
   letter-spacing: 1.2px;
 }
 
+/* название услуги */
+
 .fp-service-content h3 {
   margin: 10px 0;
   font-family: 'Nunito', sans-serif;
-  font-size: clamp(24px, 2.5vw, 33px);
+  font-size: clamp(21px, 2vw, 30px);
   font-weight: 1000;
   letter-spacing: -1px;
 }
+
+/* описание услуги */
 
 .fp-service-content p {
   max-width: 270px;
@@ -643,32 +787,37 @@
   line-height: 1.8;
 }
 
-.fp-service-decoration {
-  position: absolute;
-  right: -12px;
-  bottom: 5px;
-  color: rgba(57, 121, 246, 0.07);
-  font-size: 150px;
-  font-weight: 900;
-  pointer-events: none;
+/* персонажи Фикси в карточках */
+
+.fp-service-character {
+  width: 46%;
+  max-width: 180px;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
 }
 
-.fp-service-card-purple .fp-service-decoration {
-  color: rgba(161, 107, 250, 0.1);
-}
+/* стрелочка в правом нижнем углу карточки */
 
 .fp-service-arrow {
   position: absolute;
   right: 23px;
   bottom: 21px;
-  z-index: 2;
+  z-index: 3;
   color: var(--blue);
   font-size: 23px;
+  pointer-events: none;
 }
+
+/* цвет стрелочки третьей карточки */
 
 .fp-service-card-purple .fp-service-arrow {
   color: var(--purple);
 }
+
+/* белая плашка под карточками */
 
 .fp-service-bottom {
   margin-top: 17px;
@@ -682,12 +831,16 @@
   border-radius: 15px;
 }
 
+/* текст в нижней плашке */
+
 .fp-service-bottom > span {
   color: #8996aa;
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 1.2px;
 }
+
+/* кнопка в нижней плашке */
 
 .fp-service-bottom button {
   padding: 0;
@@ -703,22 +856,53 @@
   font-size: 17px;
 }
 
-/* этапы работы */
+/* ==================================================
+   КАРТОЧКИ УСЛУГ НА ТЕЛЕФОНАХ
+   ================================================== */
+
+@media (max-width: 700px) {
+  .fp-service-body {
+    min-height: 170px;
+  }
+
+  .fp-service-character {
+    width: 43%;
+    max-width: 155px;
+  }
+
+  .fp-service-content h3 {
+    font-size: 22px;
+  }
+
+  .fp-service-content p {
+    font-size: 10px;
+  }
+}
+
+
+/* ==================================================
+   7. ЭТАПЫ РАБОТЫ
+   Фон секции и четыре карточки с шагами
+   ================================================== */
 
 .fp-process-section {
   padding: 75px 0 90px;
-  background: #eef3fc;
+  background: #eef3fc; /* фон всего блока */
 }
 
 .fp-process {
   padding: 0;
 }
 
+/* сетка шагов */
+
 .fp-steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
+
+/* отдельная карточка шага */
 
 .fp-step {
   min-height: 260px;
@@ -730,11 +914,15 @@
   border-radius: 18px;
 }
 
+/* номер шага */
+
 .fp-step-number {
   color: var(--purple);
-  font-size: 11px;
+  font-size: 20px;
   font-weight: 900;
 }
+
+/* квадрат с иконкой шага */
 
 .fp-step-icon {
   width: 54px;
@@ -748,10 +936,14 @@
   font-size: 24px;
 }
 
+/* чередование цветов иконок */
+
 .fp-step:nth-child(even) .fp-step-icon {
   background: #f0eaff;
   color: var(--purple);
 }
+
+/* заголовок шага */
 
 .fp-step h3 {
   margin: 0 0 8px;
@@ -760,12 +952,9 @@
   font-weight: 1000;
 }
 
-.fp-step p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.8;
-}
+
+
+/* цветная полоска внизу карточки */
 
 .fp-step::after {
   content: '';
@@ -782,11 +971,14 @@
   background: var(--purple);
 }
 
-/* курьер */
+/* ==================================================
+   8. БЛОК ПРО КУРЬЕРА
+   иконка, заголовок, описание и кнопка
+   ================================================== */
 
 .fp-courier {
   width: min(1300px, calc(100% - 100px));
-  margin: 85px auto;
+  margin: 85px auto; /* расстояние сверху и снизу */
   padding: 30px;
   display: grid;
   grid-template-columns: 65px 1fr auto;
@@ -796,6 +988,8 @@
   border: 1px solid #e3eaff;
   border-radius: 21px;
 }
+
+/* квадрат с иконкой курьера */
 
 .fp-courier-symbol {
   width: 58px;
@@ -807,6 +1001,8 @@
   color: var(--purple);
   font-size: 25px;
 }
+
+/* текстовая часть блока курьера */
 
 .fp-courier-copy h2 {
   margin: 9px 0;
@@ -824,6 +1020,8 @@
   line-height: 1.8;
 }
 
+/* кнопка блока курьера */
+
 .fp-courier > button {
   min-height: 50px;
   padding: 0 18px;
@@ -835,7 +1033,7 @@
   border-radius: 13px;
   background: white;
   color: var(--blue);
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 900;
   transition: 0.2s ease;
 }
@@ -849,7 +1047,10 @@
   font-size: 17px;
 }
 
-/* нижний блок */
+/* ==================================================
+   9. НИЖНИЙ БЛОК С ПРИЗЫВОМ К ДЕЙСТВИЮ ЙОУ
+   Тёмный фон, текст, кнопка и летающий Фикси
+   ================================================== */
 
 .fp-contact {
   width: min(1480px, calc(100% - 80px));
@@ -864,10 +1065,12 @@
   overflow: hidden;
   background:
     radial-gradient(ellipse at 80% 50%, rgba(91, 111, 203, 0.3), transparent 45%),
-    #192d50;
+    #192d50; /* основной тёмно-синий фон */
   border-radius: 23px;
   color: white;
 }
+
+/* текстовая часть нижнего блока */
 
 .fp-contact-copy {
   position: relative;
@@ -877,6 +1080,8 @@
 .fp-contact-copy .fp-eyebrow {
   color: #c2a5ff;
 }
+
+/* большой заголовок нижнего блока */
 
 .fp-contact-copy h2 {
   margin: 22px 0 17px;
@@ -891,13 +1096,17 @@
   color: #a7c3ff;
 }
 
+/* описание нижнего блока */
+
 .fp-contact-copy > p {
   max-width: 430px;
   margin: 0;
   color: #b7c6dd;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.9;
 }
+
+/* кнопка нижнего блока */
 
 .fp-contact-button {
   margin-top: 28px;
@@ -909,6 +1118,8 @@
   background: #a17fff;
 }
 
+/* область с летающим персонажем */
+
 .fp-contact-art {
   min-height: 350px;
   position: relative;
@@ -917,6 +1128,8 @@
   justify-content: center;
 }
 
+/* окружность за персонажем */
+
 .fp-contact-ring {
   width: 330px;
   height: 330px;
@@ -924,6 +1137,10 @@
   border: 1px solid rgba(173, 193, 255, 0.22);
   border-radius: 50%;
 }
+
+
+
+/* летающий Фикси - размер и анимация */
 
 .fp-fixi-fly {
   width: 100%;
@@ -935,6 +1152,8 @@
   filter: drop-shadow(0 20px 25px rgba(0, 0, 0, 0.2));
 }
 
+/* декоративная звезда */
+
 .fp-contact-star {
   position: absolute;
   top: 4%;
@@ -943,6 +1162,8 @@
   font-size: 43px;
   animation: fp-spin 18s linear infinite;
 }
+
+/* маленькая наклонённая подпись */
 
 .fp-contact-caption {
   position: absolute;
@@ -954,6 +1175,8 @@
   letter-spacing: 2px;
   transform: rotate(-9deg);
 }
+
+/* круглая печать FIX POINT */
 
 .fp-contact-stamp {
   width: 83px;
@@ -974,7 +1197,10 @@
   transform: rotate(10deg);
 }
 
-/* подвал */
+/* ==================================================
+   10. ПОДВАЛ САЙТА
+   Логотип, копирайт и ссылки тут чет поменять потом в tsx
+   ================================================== */
 
 .fp-footer {
   width: min(1480px, calc(100% - 80px));
@@ -987,22 +1213,30 @@
   gap: 20px;
 }
 
+/* логотип в подвале */
+
 .fp-footer-logo {
   font-size: 19px;
 }
 
+/* картинка логотипа в подвале */
+
 .fp-footer-logo img {
-  width: 30px;
-  height: 30px;
+  width: 50px;
+  height: 50px;
   object-fit: contain;
 }
 
+/* строка с копирайтом */
+
 .fp-footer-copy {
   color: #9aa5b7;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 1px;
 }
+
+/* ссылки и кнопка в подвале */
 
 .fp-footer-nav {
   gap: 20px;
@@ -1027,7 +1261,12 @@
   color: var(--blue);
 }
 
-/* анимации */
+/* ==================================================
+   11. АНИМАЦИИ
+   Здесь можно менять скорость и характер движения
+   ================================================== */
+
+/* плавное покачивание персонажей вверх-вниз */
 
 @keyframes fp-float {
   0%,
@@ -1036,15 +1275,19 @@
   }
 
   50% {
-    transform: translateY(-12px);
+    transform: translateY(-12px); /* высота покачивания */
   }
 }
+
+/* вращение декоративных звёздочек */
 
 @keyframes fp-spin {
   to {
     transform: rotate(360deg);
   }
 }
+
+/* движение бегущей строки */
 
 @keyframes fp-marquee {
   from {
@@ -1056,7 +1299,10 @@
   }
 }
 
-/* планшеты */
+/* ==================================================
+   12. АДАПТАЦИЯ ДЛЯ ПЛАНШЕТОВ
+   Эти значения действуют при ширине экрана до 1050px
+   ================================================== */
 
 @media (max-width: 1050px) {
   .fp-header,
@@ -1103,9 +1349,15 @@
   }
 }
 
-/* телефоны */
+/* ==================================================
+   13. АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНОВ
+   Эти значения действуют при ширине экрана до 700px
+   ================================================== */
 
 @media (max-width: 700px) {
+
+  /* шапка на телефоне */
+
   .fp-header {
     width: calc(100% - 24px);
     min-height: 64px;
@@ -1132,6 +1384,8 @@
     padding: 0 11px;
     font-size: 9px;
   }
+
+  /* первый экран на телефоне */
 
   .fp-hero {
     width: calc(100% - 24px);
@@ -1191,6 +1445,8 @@
     margin-top: 28px;
   }
 
+  /* картинка Фикси на телефоне */
+
   .fp-hero-art {
     min-height: 330px;
   }
@@ -1218,9 +1474,13 @@
     display: none;
   }
 
+  /* бегущая строка на телефоне */
+
   .fp-marquee {
     margin: 25px 0 50px;
   }
+
+  /* общие секции на телефоне */
 
   .fp-section {
     width: calc(100% - 32px);
@@ -1241,6 +1501,8 @@
     font-size: 11px;
   }
 
+  /* карточки услуг на телефоне */
+
   .fp-service-grid {
     grid-template-columns: 1fr;
   }
@@ -1255,6 +1517,8 @@
     align-items: flex-start;
     flex-direction: column;
   }
+
+  /* этапы работы на телефоне */
 
   .fp-process-section {
     padding: 55px 0;
@@ -1278,6 +1542,8 @@
     font-size: 10px;
   }
 
+  /* блок курьера на телефоне */
+
   .fp-courier {
     width: calc(100% - 32px);
     margin: 55px auto;
@@ -1293,6 +1559,8 @@
   .fp-courier > button {
     width: 100%;
   }
+
+  /* нижний блок на телефоне */
 
   .fp-contact {
     width: calc(100% - 24px);
@@ -1329,6 +1597,8 @@
     font-size: 10px;
   }
 
+  /* подвал на телефоне */
+
   .fp-footer {
     width: calc(100% - 32px);
     padding: 25px 0;
@@ -1347,7 +1617,10 @@
   }
 }
 
-/* уменьшение анимации по настройкам устройства */
+/* ==================================================
+   14. НАСТРОЙКИ ДОСТУПНОСТИ
+   Уменьшаем анимацию, если это включено в устройстве
+   ================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   .fp-home *,

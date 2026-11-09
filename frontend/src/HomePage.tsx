@@ -4,6 +4,10 @@ import logo from './assets/logo.png'
 import fixi from './assets/fixi.png'
 import fixiFly from './assets/fixi_fly.png'
 
+import fixiD from './assets/fixi_d.png'
+import fixiR from './assets/fixi_r.png'
+import fixiO from './assets/fixi_o.png'
+
 type HomePageProps = {
   onEmployeeClick: () => void
   onClientClick: () => void
@@ -124,84 +128,116 @@ function HomePage({ onEmployeeClick, onClientClick }: HomePageProps) {
         </div>
       </div>
 
-      {/* услуги */}
-      <section className="fp-section fp-services" id="services">
-        <div className="fp-section-top">
-          <div>
-            <span className="fp-eyebrow">02 / ЧЕМ МЫ ПОМОЖЕМ</span>
-            <h2>
-              Всё для вашей
-              <br />
-              <span>техники.</span>
-            </h2>
-          </div>
-          <p>
-            От поиска проблемы до её решения.
-            <br />
-            Разберёмся вместе.
-          </p>
-        </div>
+            {/* услуги */}
+            <section className="fp-section fp-services" id="services">
+              <div className="fp-section-top">
+                <div>
+                  <span className="fp-eyebrow">02 / ЧЕМ МЫ ПОМОЖЕМ</span>
+                  <h2>
+                    Всё для вашей
+                    <br />
+                    <span>техники.</span>
+                  </h2>
+                </div>
+                <p>
+                  От поиска проблемы до её решения.
+                  <br />
+                  Разберёмся вместе.
+                </p>
+              </div>
 
-        <div className="fp-service-grid">
-          <article className="fp-service-card fp-service-card-main">
-            <div className="fp-service-top">
-              <span>01 — ANALYSIS</span>
-              <span className="fp-service-icon">⌕</span>
-            </div>
-            <div className="fp-service-content">
-              <span className="fp-service-tag">СНАЧАЛА РАЗБЕРЁМСЯ</span>
-              <h3>Диагностика</h3>
-              <p>
-                Определим причину неисправности и подскажем,
-                что можно сделать.
-              </p>
-            </div>
-            <span className="fp-service-decoration">⌕</span>
-            <span className="fp-service-arrow">↗</span>
-          </article>
+              <div className="fp-service-grid">
 
-          <article className="fp-service-card fp-service-card-blue">
-            <div className="fp-service-top">
-              <span>02 — REPAIR</span>
-              <span className="fp-service-icon">✳</span>
-            </div>
-            <div className="fp-service-content">
-              <span className="fp-service-tag">ВОЗВРАЩАЕМ К ЖИЗНИ</span>
-              <h3>Ремонт техники</h3>
-              <p>
-                Поможем устранить неисправность и вернуть
-                устройству работоспособность.
-              </p>
-            </div>
-            <span className="fp-service-decoration">✳</span>
-            <span className="fp-service-arrow">↗</span>
-          </article>
+                {/* диагностика */}
+                <article className="fp-service-card fp-service-card-main">
+                  <div className="fp-service-top">
+                    <span>01 — ANALYSIS</span>
+                    <span className="fp-service-icon">⌕</span>
+                  </div>
 
-          <article className="fp-service-card fp-service-card-purple">
-            <div className="fp-service-top">
-              <span>03 — CARE</span>
-              <span className="fp-service-icon">♡</span>
-            </div>
-            <div className="fp-service-content">
-              <span className="fp-service-tag">ЗАБОТИМСЯ О ВАЖНОМ</span>
-              <h3>Обслуживание</h3>
-              <p>
-                Поможем поддерживать устройство в хорошем
-                состоянии.
-              </p>
-            </div>
-            <span className="fp-service-decoration">♡</span>
-            <span className="fp-service-arrow">↗</span>
-          </article>
-        </div>
+                  <div className="fp-service-body">
+                    <div className="fp-service-content">
+                      <span className="fp-service-tag">СНАЧАЛА РАЗБЕРЁМСЯ</span>
+                      <h3>Диагностика</h3>
+                      <p>
+                        Определим причину неисправности и подскажем,
+                        что можно сделать.
+                      </p>
+                    </div>
 
-        <div className="fp-service-bottom">
-          <span>НЕ УВЕРЕНЫ, КАКАЯ УСЛУГА НУЖНА?</span>
-          <button onClick={onClientClick}>
-            Расскажите нам о проблеме <span>↗</span>
-          </button>
-        </div>
-      </section>
+                    <img
+                      src={fixiD}
+                      alt="Фикси демонстрирует диагностику"
+                      className="fp-service-character"
+                    />
+                  </div>
+
+                  <span className="fp-service-arrow">↗</span>
+                </article>
+
+                {/* ремонт */}
+                <article className="fp-service-card fp-service-card-blue">
+                  <div className="fp-service-top">
+                    <span>02 — REPAIR</span>
+                    <span className="fp-service-icon">✳</span>
+                  </div>
+
+                  <div className="fp-service-body">
+                    <div className="fp-service-content">
+                      <span className="fp-service-tag">ВОЗВРАЩАЕМ К ЖИЗНИ</span>
+                      <h3>Ремонт техники</h3>
+                      <p>
+                        Поможем устранить неисправность и вернуть
+                        устройству работоспособность.
+                      </p>
+                    </div>
+
+                    <img
+                      src={fixiR}
+                      alt="Фикси демонстрирует ремонт техники"
+                      className="fp-service-character"
+                    />
+                  </div>
+
+                  <span className="fp-service-arrow">↗</span>
+                </article>
+
+                {/* обслуживание */}
+                <article className="fp-service-card fp-service-card-purple">
+                  <div className="fp-service-top">
+                    <span>03 — CARE</span>
+                    <span className="fp-service-icon">♡</span>
+                  </div>
+
+                  <div className="fp-service-body">
+                    <div className="fp-service-content">
+                      <span className="fp-service-tag">ЗАБОТИМСЯ О ВАЖНОМ</span>
+                      <h3>Обслуживание</h3>
+                      <p>
+                        Поможем поддерживать устройство в хорошем
+                        состоянии.
+                      </p>
+                    </div>
+
+                    <img
+                      src={fixiO}
+                      alt="Фикси демонстрирует обслуживание техники"
+                      className="fp-service-character"
+                    />
+                  </div>
+
+                  <span className="fp-service-arrow">↗</span>
+                </article>
+
+              </div>
+
+              <div className="fp-service-bottom">
+                <span>НЕ УВЕРЕНЫ, КАКАЯ УСЛУГА НУЖНА?</span>
+                <button onClick={onClientClick}>
+                  Расскажите нам о проблеме <span>↗</span>
+                </button>
+              </div>
+            </section>
 
       {/* этапы работы */}
       <section className="fp-process-section" id="process">
@@ -215,11 +251,6 @@ function HomePage({ onEmployeeClick, onClientClick }: HomePageProps) {
                 до <span>результата.</span>
               </h2>
             </div>
-            <p>
-              Прозрачно, понятно и без лишней
-              <br />
-              головной боли.
-            </p>
           </div>
 
           <div className="fp-steps">
