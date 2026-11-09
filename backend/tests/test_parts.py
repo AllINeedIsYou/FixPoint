@@ -13,7 +13,7 @@ def test_part_is_taken_from_stock_with_stock_price(client, staff, stock, applica
     part = r.json()["parts"][0]
     assert part["name"] == "Провода" and part["price"] == 50 and part["quantity"] == 5
     assert r.json()["parts_cost"] == 250
-    assert stock_quantity(client, "Провода") == 95
+    assert stock_quantity(client, "Провода", staff["repairer"]) == 95
 
 
 def test_part_not_in_stock(client, staff, application_in_repair):
@@ -25,14 +25,14 @@ def test_not_enough_in_stock(client, staff, stock, application_in_repair):
     stock("Экран", 3000, 2)
     r = add_part(client, staff["repairer"], application_in_repair, "Экран", 3)
     assert r.status_code == 400
-    assert stock_quantity(client, "Экран") == 2
+    assert stock_quantity(client, "Экран", staff["repairer"]) == 2
 
 
-def test_stock_price_change_does_not_change_added_parts(client, staff, stock, application_in_repair):
+def test_stock_price_change_does_not_change_added_parts(client, staff, stock, application_in_repair, admin_headers):
     part = stock("Провода", 50, 100)
     add_part(client, staff["repairer"], application_in_repair, "Провода", 2)
 
-    client.patch(f"/services/stock/{part['id']}", json={"price": 999})
+    client.patch(f"/services/stock/{part['id']}", json={"price": 999}, headers=admin_headers)
 
     assert get_application(client, staff["repairer"], application_in_repair)["parts_cost"] == 100
 
@@ -43,7 +43,7 @@ def test_delete_part_returns_it_to_stock(client, staff, stock, application_in_re
 
     r = client.delete(f"/repairer/{application_in_repair}/parts/{part_id}", headers=staff["repairer"])
     assert r.status_code == 200 and r.json()["parts"] == []
-    assert stock_quantity(client, "Провода") == 100
+    assert stock_quantity(client, "Провода", staff["repairer"]) == 100
 
     r = client.delete(f"/repairer/{application_in_repair}/parts/{part_id}", headers=staff["repairer"])
     assert r.status_code == 404
@@ -62,7 +62,7 @@ def test_cannot_add_parts_before_diagnostics(client, staff, stock, new_applicati
     client.post(f"/repairer/{app_id}/takeRepair", headers=staff["repairer"])
     r = add_part(client, staff["repairer"], app_id, "Провода")
     assert r.status_code == 400 and "диагностики" in r.json()["detail"]
-    assert stock_quantity(client, "Провода") == 100
+    assert stock_quantity(client, "Провода", staff["repairer"]) == 100
 
 
 def test_cannot_add_parts_if_not_taken(client, staff, stock, new_application):

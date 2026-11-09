@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import IntEnum
-from sqlalchemy import String, Text, Integer, Numeric, ForeignKey, Index, func, DateTime
+from sqlalchemy import String, Text, Integer, Numeric, ForeignKey, Index, func, DateTime, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.databases.database import Base
 from src.application_flow import ApplicationSource, DeliveryStatus
@@ -231,4 +231,18 @@ class AccessCode(Base):
     role: Mapped[str] = mapped_column(String(50),nullable=False)
 
     is_active: Mapped[bool] = mapped_column(default=True,nullable=False)
+
+
+# Пять ключей принадлежат одной записи владельца в access_codes.
+Index("uq_single_owner", AccessCode.role, unique=True,
+      postgresql_where=AccessCode.role == "owner", sqlite_where=AccessCode.role == "owner")
+
+
+class OwnerAccessCode(Base):
+    __tablename__ = "owner_access_codes"
+    __table_args__ = (CheckConstraint("slot BETWEEN 1 AND 5", name="ck_owner_code_slot"),)
+
+    slot: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("access_codes.id"), nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
 

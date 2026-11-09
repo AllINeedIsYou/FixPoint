@@ -18,8 +18,11 @@ def get_all_parts(db:Session):
     return db.query(StockPart).all()
 
 #ЧИСТАЯ ФУНКЦИЯ ДЛЯ БД КОДЫ
-def get_all_accesscode(db: Session):
-    return db.query(AccessCode).all()
+def get_all_accesscode(db: Session, actor_role: str):
+    query = db.query(AccessCode).filter(AccessCode.role != "owner")
+    if actor_role != "owner":
+        query = query.filter(AccessCode.role != "admin")
+    return query.order_by(AccessCode.id).all()
 
 
 # ГЕНЕРИРУЕМ КОД

@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from starlette import status
 from src.api.services.services_admin import create_unique_access_code, dismissal_employee,hire_employee,release_application,reload_access_codes
-from src.databases.database import get_db, Base, engine
+from src.databases.database import get_db, Base
 from src.shemas import ApplicationShema, AccessCodeCreateSchema, AccessCodeResponseSchema, ReloadAccessCodeResponcrShema,ReloadAccessCodeCreateShema
 from src.api.services.services import get_all_applications, get_all_accesscode, get_all_parts
 from src.api.services.services_stock import get_stock, create_stock_part, update_stock_part
 from src.shemas import StockPartShema, StockPartCreateShema, StockPartUpdateShema, CleanStr
+from src.shemas import EmployeeResponseSchema
+from src.auth.auth import require_role
 
 
-router_admin = APIRouter(prefix='/services', tags=["Админ"])
+admin_access = require_role("admin")
+router_admin = APIRouter(prefix='/services', tags=["Админ и владелец"], dependencies=[Depends(admin_access)])
 
 
 #СПИСОК ЗАЯВОК
@@ -18,30 +20,22 @@ def get_application_endpoint(db: Session = Depends(get_db)):
     return get_all_applications(db)
 
 #CПИСОК КОДОВ
-@router_admin.get('/get_accesscode',summary="Список работников и кодов")
-def get_all_accesscode_endpoint(db: Session=Depends(get_db)):
-    return get_all_accesscode(db)
+@router_admin.get('/get_accesscode', response_model=list[EmployeeResponseSchema], summary="Список работников без кодов и хешей")
+def get_all_accesscode_endpoint(db: Session=Depends(get_db), actor: dict = Depends(admin_access)):
+    return get_all_accesscode(db, actor_role=actor["role"])
 
 
 # СОЗДАНИЕ ФАЙЛА С БД
-@router_admin.post('/database_create', summary='Создание базы данных')
-def create_bd():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    return {"status": "database created"}
+@router_admin.post('/database_create', summary='Создать отсутствующие таблицы без удаления данных')
+def create_bd(db: Session = Depends(get_db)):
+    Base.metadata.create_all(bind=db.get_bind())
+    return {"status": "database ready"}
 
 
 #СГЕНЕРИРОВАТЬ И СОХРАНИТЬ НОВЫЙ КОД ДОСТУПА
 @router_admin.post("/access-codes",response_model=AccessCodeResponseSchema,summary="Сгенерировать и сохранить новый код доступа")
-def generate_code_endpoint(data: AccessCodeCreateSchema,db: Session = Depends(get_db)):
-    allowed_roles = ["operator", "engineer", "repairer"]
-    if data.role not in allowed_roles:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Недопустимая роль. Допустимые роли: {','.join(allowed_roles)}"
-        )
-
-    db_entry, raw_code = create_unique_access_code(db=db, role=data.role, FIO=data.FIO)
+def generate_code_endpoint(data: AccessCodeCreateSchema,db: Session = Depends(get_db), actor: dict = Depends(admin_access)):
+    db_entry, raw_code = create_unique_access_code(db=db, role=data.role, FIO=data.FIO, actor_role=actor["role"])
 
     return AccessCodeResponseSchema(
         id=db_entry.id,
@@ -51,20 +45,20 @@ def generate_code_endpoint(data: AccessCodeCreateSchema,db: Session = Depends(ge
     )
 
 @router_admin.post('/reload-access-code',response_model=ReloadAccessCodeResponcrShema, summary='перевыпустить код достпуа')
-def reload_ac(data: ReloadAccessCodeCreateShema, db: Session = Depends(get_db)):
-    return reload_access_codes(db=db,data=data)
+def reload_ac(data: ReloadAccessCodeCreateShema, db: Session = Depends(get_db), actor: dict = Depends(admin_access)):
+    return reload_access_codes(db=db,data=data, actor_role=actor["role"])
 
 
 
 #УВОЛЬНЕНИЕ
 @router_admin.patch('/{employee_id}/dismissal',summary='Увольнение работника, деактивация')
-def dismissal(employee_id:int ,db:Session=Depends(get_db)):
-    return dismissal_employee(employee_id=employee_id,db=db)
+def dismissal(employee_id:int ,db:Session=Depends(get_db), actor: dict = Depends(admin_access)):
+    return dismissal_employee(employee_id=employee_id,db=db, actor_role=actor["role"])
 
 #Возвращение на работу
 @router_admin.patch('/{employee_id}/hier',summary='Возвращение работника на работу')
-def hire_worker(employee_id:int ,db:Session=Depends(get_db)):
-    return hire_employee(employee_id=employee_id,db=db)
+def hire_worker(employee_id:int ,db:Session=Depends(get_db), actor: dict = Depends(admin_access)):
+    return hire_employee(employee_id=employee_id,db=db, actor_role=actor["role"])
 #СКЛАД: СПИСОК ЗАПЧАСТЕЙ
 @router_admin.get('/stocks', summary="Склад запчастей")
 def get_stocks(db: Session = Depends(get_db)):
