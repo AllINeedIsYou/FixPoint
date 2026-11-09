@@ -56,9 +56,29 @@ def _auth(token):
 
 
 @pytest.fixture
-def employee(client):
+def owner(client, db_session_factory):
+    from src.auth.owner import initialize_owner
+    with db_session_factory() as db:
+        owner, codes = initialize_owner(db)
+        owner_id = owner.id
+    response = client.post("/auth/login", data={"username": codes[0]})
+    assert response.status_code == 200, response.text
+    return owner_id, _auth(response.json()["access_token"]), codes
+
+
+@pytest.fixture
+def admin_headers(client, owner):
+    response = client.post("/services/access-codes", json={"role": "admin", "FIO": "Администратор тестов"}, headers=owner[1])
+    assert response.status_code == 200, response.text
+    response = client.post("/auth/login", data={"username": response.json()["code"]})
+    assert response.status_code == 200, response.text
+    return _auth(response.json()["access_token"])
+
+
+@pytest.fixture
+def employee(client, admin_headers):
     def make(role, fio):
-        r = client.post("/services/access-codes", json={"role": role, "FIO": fio})
+        r = client.post("/services/access-codes", json={"role": role, "FIO": fio}, headers=admin_headers)
         assert r.status_code == 200, r.text
         data = r.json()
         r = client.post("/auth/login", data={"username": data["code"]})
@@ -150,9 +170,9 @@ def application_in_repair(client, staff, new_application):
 
 
 @pytest.fixture
-def stock(client):
+def stock(client, admin_headers):
     def add(name, price, quantity):
-        r = client.post("/services/stock", json={"name": name, "price": price, "quantity": quantity})
+        r = client.post("/services/stock", json={"name": name, "price": price, "quantity": quantity}, headers=admin_headers)
         assert r.status_code == 200, r.text
         return r.json()
     return add
@@ -164,6 +184,6 @@ def get_application(client, headers, app_id):
     return next(a for a in r.json() if a["id"] == app_id)
 
 
-def stock_quantity(client, name):
-    r = client.get("/services/stock", params={"search": name})
+def stock_quantity(client, name, headers):
+    r = client.get("/repairer/stock", params={"search": name}, headers=headers)
     return next(p for p in r.json() if p["name"] == name)["quantity"]

@@ -12,7 +12,7 @@ from psycopg2.errors import UniqueViolation
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from src.databases.database import get_db, settings
-from src.models import AccessCode,Client,ClientSessions,Application
+from src.models import AccessCode,Client,ClientSessions,Application,OwnerAccessCode
 from src.shemas import TokenResponseSchema,ClientCreateShema,ClientLoginSchema,ClientResponseShema
 from fastapi.security import OAuth2PasswordBearer
 
@@ -24,7 +24,7 @@ ACCESS_TOKEN_EXPIRE_HOURS = 24
 #описание видно в окне Authorize в swagger
 security = OAuth2PasswordBearer(
     tokenUrl="/auth/login",
-    description="Вход по коду доступа сотрудника: введите код в поле **username**, поле **password** оставьте пустым.",
+    description="Вход по коду доступа сотрудника или владельца: введите код в поле **username**, поле **password** оставьте пустым.",
 )
 
 
@@ -53,7 +53,13 @@ def login_for_access_token(code: str = Form(alias="username"), db: Session = Dep
     #Хешируем код пользователя
     hashed_input = hash_code(code)
     #сравниваем два хеша
-    access_code_entry = (db.query(AccessCode).filter(AccessCode.code_hash == hashed_input).first())
+    access_code_entry = db.query(AccessCode).filter(
+        AccessCode.code_hash == hashed_input, AccessCode.role != "owner",
+    ).first()
+    if access_code_entry is None:
+        access_code_entry = db.query(AccessCode).join(
+            OwnerAccessCode, OwnerAccessCode.owner_id == AccessCode.id,
+        ).filter(OwnerAccessCode.code_hash == hashed_input, AccessCode.role == "owner").first()
     #Если пальчиком по буковке промазал
     if not access_code_entry:
         raise HTTPException(
@@ -83,7 +89,7 @@ def login_for_access_token(code: str = Form(alias="username"), db: Session = Dep
 def require_role(required_role: str):
     def dependency(token: str = Depends(security), db: Session = Depends(get_db)):
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"require": ["exp", "sub", "role"]})
             user_role: str = payload.get("role")
 
             #токен живет 24 часа, поэтому уволенного проверяем по БД на каждом запросе, а не только при входе
@@ -103,7 +109,13 @@ def require_role(required_role: str):
                     detail="Невалидный токен: отсутствует роль",
                 )
 
-            if user_role != required_role:
+            # Роль сверяем с БД: старый токен не сохраняет прежние права,
+            # а токен обычного сотрудника не может объявить его владельцем.
+            if employee.role != user_role:
+                raise HTTPException(status_code=401, detail="Роль сотрудника изменилась, войдите заново")
+
+            allowed_roles = {required_role, "owner"} if required_role == "admin" else {required_role}
+            if user_role not in allowed_roles:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"Недостаточно прав. Требуется роль: {required_role}",

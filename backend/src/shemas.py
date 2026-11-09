@@ -215,6 +215,14 @@ class AccessCodeResponseSchema(BaseModel):
     is_active: bool
 
 
+class EmployeeResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    FIO: str
+    role: str
+    is_active: bool
+
+
 
 # схема для маленькой, миленькой jwtешки
 class TokenResponseSchema(BaseModel):

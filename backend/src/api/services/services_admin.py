@@ -9,7 +9,19 @@ from src.shemas import ReloadAccessCodeCreateShema, ReloadAccessCodeResponcrShem
 
 
 #создание и проверка кода+сохранение
-def create_unique_access_code(db: Session, role: str, FIO: str) -> tuple[AccessCode, str]:
+def authorize_employee_management(target_role: str, actor_role: str):
+    if actor_role not in {"admin", "owner"}:
+        raise HTTPException(status_code=403, detail="Управление сотрудниками доступно администратору и владельцу")
+    if target_role == "owner":
+        raise HTTPException(status_code=403, detail="Единственного владельца и его пять кодов нельзя менять через управление сотрудниками")
+    if target_role == "admin" and actor_role != "owner":
+        raise HTTPException(status_code=403, detail="Управлять администраторами может только владелец")
+
+
+def create_unique_access_code(db: Session, role: str, FIO: str, actor_role: str) -> tuple[AccessCode, str]:
+    authorize_employee_management(role, actor_role)
+    if role not in {"operator", "engineer", "repairer", "admin"}:
+        raise HTTPException(status_code=400, detail="Недопустимая роль сотрудника")
 
     fio_test = db.query(AccessCode).filter(AccessCode.FIO == FIO).first()
     if not fio_test:
@@ -54,13 +66,14 @@ def create_unique_access_code(db: Session, role: str, FIO: str) -> tuple[AccessC
 
 
 #увольнение работника
-def dismissal_employee(employee_id: int,db: Session):
+def dismissal_employee(employee_id: int,db: Session, actor_role: str):
     employee=db.query(AccessCode).filter(AccessCode.id==employee_id).first()
     if not employee:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Работник с id={employee_id} не найден"
         )
+    authorize_employee_management(employee.role, actor_role)
     if not employee.is_active:
         raise HTTPException(
             status_code=400,
@@ -75,13 +88,14 @@ def dismissal_employee(employee_id: int,db: Session):
         'message': employee_status
     }
 
-def hire_employee(employee_id: int, db: Session):
+def hire_employee(employee_id: int, db: Session, actor_role: str):
     employee=db.query(AccessCode).filter(AccessCode.id==employee_id).first()
     if not employee:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Работник с {employee_id} не найден.'
         )
+    authorize_employee_management(employee.role, actor_role)
     if employee.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -119,10 +133,11 @@ def release_application(application_id: int, db: Session):
     db.refresh(application)
     return application
 
-def reload_access_codes(db: Session, data: ReloadAccessCodeCreateShema):
+def reload_access_codes(db: Session, data: ReloadAccessCodeCreateShema, actor_role: str):
     employee=db.query(AccessCode).filter(AccessCode.id==data.id).first()
     if employee is None:
         raise HTTPException(status_code=404,detail='работник не найден')
+    authorize_employee_management(employee.role, actor_role)
     try:
         new_code = generate_access_code()
         hashed = hash_code(new_code)

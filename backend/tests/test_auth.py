@@ -2,8 +2,8 @@ import pytest
 
 
 @pytest.fixture
-def code(client):
-    r = client.post("/services/access-codes", json={"role": "repairer", "FIO": "Мастер"})
+def code(client, admin_headers):
+    r = client.post("/services/access-codes", json={"role": "repairer", "FIO": "Мастер"}, headers=admin_headers)
     return r.json()["code"]
 
 
@@ -30,9 +30,9 @@ def test_no_code(client):
     assert client.post("/auth/login", data={}).status_code == 422
 
 
-def test_dismissed_employee_cannot_login(client, code):
-    employee_id = client.get("/services/get_accesscode").json()[0]["id"]
-    client.patch(f"/services/{employee_id}/dismissal")
+def test_dismissed_employee_cannot_login(client, code, admin_headers):
+    employee_id = client.get("/services/get_accesscode", headers=admin_headers).json()[0]["id"]
+    client.patch(f"/services/{employee_id}/dismissal", headers=admin_headers)
     assert client.post("/auth/login", data={"username": code}).status_code == 401
 
 
@@ -41,17 +41,17 @@ def test_swagger_shows_login_hint(client):
     assert "оставьте пустым" in scheme["description"]
 
 
-def test_dismissed_employee_token_stops_working(client, code):
+def test_dismissed_employee_token_stops_working(client, code, admin_headers):
     token = client.post("/auth/login", data={"username": code}).json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    employee_id = client.get("/services/get_accesscode").json()[0]["id"]
+    employee_id = client.get("/services/get_accesscode", headers=admin_headers).json()[0]["id"]
     assert client.get("/repairer/get_applications", headers=headers).status_code == 200
 
-    client.patch(f"/services/{employee_id}/dismissal")
+    client.patch(f"/services/{employee_id}/dismissal", headers=admin_headers)
     r = client.get("/repairer/get_applications", headers=headers)
     assert r.status_code == 401 and "уволен" in r.json()["detail"]
 
-    client.patch(f"/services/{employee_id}/hier")
+    client.patch(f"/services/{employee_id}/hier", headers=admin_headers)
     assert client.get("/repairer/get_applications", headers=headers).status_code == 200
 
 
