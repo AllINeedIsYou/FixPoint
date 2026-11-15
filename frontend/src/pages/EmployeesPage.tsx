@@ -1,4 +1,3 @@
-
 import { useState, type FormEvent } from 'react'
 import './EmployeesPage.css'
 
@@ -13,6 +12,7 @@ type EmployeesPageProps = {
   employees: Employee[]
   loading: boolean
   error: string
+  currentUserRole: string
   onToggleActive: (id: number) => Promise<void>
   onGenerateCode: (id: number) => Promise<string>
   onCreateEmployee: (FIO: string, role: string) => Promise<string>
@@ -29,6 +29,7 @@ function EmployeesPage({
   employees,
   loading,
   error,
+  currentUserRole,
   onToggleActive,
   onGenerateCode,
   onCreateEmployee,
@@ -160,10 +161,17 @@ function EmployeesPage({
           </label>
           <label>
             Должность
-            <select value={newEmployeeRole} onChange={(event) => setNewEmployeeRole(event.target.value)}>
+            <select
+              value={newEmployeeRole}
+              onChange={(event) => setNewEmployeeRole(event.target.value)}
+            >
               <option value="operator">Оператор</option>
               <option value="engineer">Инженер</option>
               <option value="repairer">Мастер</option>
+
+              {currentUserRole === 'owner' && (
+                <option value="admin">Администратор</option>
+              )}
             </select>
           </label>
           <button className="secondary-button" type="submit" disabled={creating}>

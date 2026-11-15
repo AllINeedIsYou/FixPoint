@@ -16,14 +16,14 @@ function Sidebar({
     {
       page: 'home',
       label: 'Главная',
-      roles: ['operator', 'engineer', 'repairer', 'admin'],
+      roles: ['operator', 'engineer', 'repairer', 'admin', 'owner'],
     },
     {
       page: 'applications',
-      label: role === 'operator' || role === 'admin'
+      label: role === 'operator' || role === 'admin' || role === 'owner'
         ? 'Все заявки'
         : 'Мои заявки',
-      roles: ['operator', 'engineer', 'repairer', 'admin'],
+      roles: ['operator', 'engineer', 'repairer', 'admin', 'owner'],
     },
     {
       page: 'delivery',
@@ -38,12 +38,12 @@ function Sidebar({
     {
       page: 'employees',
       label: 'Сотрудники',
-      roles: ['admin'],
+      roles: ['admin', 'owner'],
     },
     {
       page: 'stock',
       label: role === 'repairer' ? 'Склад запчастей' : 'Склад',
-      roles: ['admin', 'repairer'],
+      roles: ['admin', 'repairer', 'owner'],
     },
   ]
 

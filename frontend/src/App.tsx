@@ -451,6 +451,7 @@ function App() {
       repairer: 'Мастер',
       operator: 'Оператор',
       admin: 'Администратор',
+      owner: 'Владелец',
       worker: 'Сотрудник',
     }
 
@@ -605,7 +606,7 @@ function App() {
   // Загружаем сотрудников, когда администратор открывает их страницу
   useEffect(() => {
     if (
-      currentUser?.role === 'admin' &&
+      (currentUser?.role === 'admin' || currentUser?.role === 'owner') &&
       activePage === 'employees' &&
       employeeToken
     ) {
@@ -1002,7 +1003,10 @@ function App() {
     // СТРАНИЦА СОТРУДНИКОВ
     // =========================
 
-    if (activePage === 'employees' && currentUser.role === 'admin') {
+    if (
+      activePage === 'employees' &&
+      (currentUser.role === 'admin' || currentUser.role === 'owner')
+      ) {
       return (
         <main className="dashboard">
           <Sidebar
@@ -1021,6 +1025,7 @@ function App() {
             employees={employeeList}
             loading={employeesLoading}
             error={employeesError}
+            currentUserRole={currentUser.role}
             onToggleActive={handleToggleEmployeeActive}
             onGenerateCode={handleGenerateEmployeeCode}
             onCreateEmployee={handleCreateEmployee}
